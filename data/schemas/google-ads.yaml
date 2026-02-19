@@ -1,0 +1,16 @@
+name: Google Ads Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Campaign: { type: string, required: true }
+  Ad Group: { type: string, required: false }
+  Impressions: { type: integer, min: 0, required: true }
+  Clicks: { type: integer, min: 0, required: true }
+  Cost: { type: float, min: 0, required: true, unit: USD }
+  Conversions: { type: float, min: 0, required: true }
+  Conversion Value: { type: float, min: 0, required: true, unit: USD }
+  Device: { type: string, values: [Mobile, Desktop, Tablet], required: false }
+  Network: { type: string, values: [Search, Display, YouTube], required: false }
+  Impression Share: { type: float, min: 0, max: 1, required: false }
+segmentation:
+  brand_vs_nonbrand: "Determined by Campaign name containing 'brand' or 'branded'"
+  geo: "Determined by Campaign name containing 'NA' or 'INTL' or country code"

@@ -1,0 +1,36 @@
+# Internal and industry benchmarks
+# Update these quarterly with actual performance data
+
+sem:
+  brand:
+    ctr: 0.08
+    cpc: 0.45
+    cvr: 0.12
+    roas: 8.0
+  non_brand:
+    ctr: 0.025
+    cpc: 1.20
+    cvr: 0.04
+    roas: 3.5
+
+display:
+  viewability: 0.65
+  ctr: 0.001
+  cpm: 5.00
+  vctr: 0.002
+
+affiliate:
+  avg_commission_rate: 0.08
+  epc: 0.50
+  new_customer_share: 0.35
+
+seo:
+  na:
+    ctr_position_1: 0.28
+    ctr_position_2: 0.15
+    ctr_position_3: 0.11
+    ctr_position_5: 0.06
+    ctr_position_10: 0.025
+  intl:
+    ctr_position_1: 0.25
+    ctr_position_3: 0.10

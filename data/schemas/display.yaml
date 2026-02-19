@@ -1,0 +1,10 @@
+name: Display/DV360 Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Campaign: { type: string, required: true }
+  Impressions: { type: integer, min: 0, required: true }
+  Clicks: { type: integer, min: 0, required: true }
+  Cost: { type: float, min: 0, required: true, unit: USD }
+  Viewable Impressions: { type: integer, min: 0, required: false }
+  Conversions: { type: float, min: 0, required: false }
+  Revenue: { type: float, min: 0, required: false, unit: USD }

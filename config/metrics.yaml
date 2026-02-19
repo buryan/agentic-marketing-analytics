@@ -1,0 +1,101 @@
+# Metric Definitions - Single Source of Truth
+# All agents reference this file. No agent defines its own formulas.
+
+metrics:
+  m1vfm:
+    name: M1VFM (Month 1 Value for Money)
+    formula: Month 1 attributed revenue per channel
+    unit: USD
+    direction: higher_better
+    channels: [sem, display, affiliate, synthesis]
+
+  roas:
+    name: ROAS (Return on Ad Spend)
+    formula: Revenue / Spend
+    unit: ratio
+    direction: higher_better
+    channels: [sem, display, affiliate]
+
+  cac:
+    name: CAC (Customer Acquisition Cost)
+    formula: Spend / New Customers
+    unit: USD
+    direction: lower_better
+    channels: [sem, display, affiliate]
+
+  contribution_margin:
+    name: Contribution Margin
+    formula: (Revenue - COGS - Variable Costs) / Revenue
+    unit: percent
+    direction: higher_better
+    channels: [synthesis]
+
+  ctr:
+    name: CTR (Click-Through Rate)
+    formula: Clicks / Impressions
+    unit: percent
+    direction: higher_better
+    channels: [sem, display, seo]
+
+  cvr:
+    name: CVR (Conversion Rate)
+    formula: Conversions / Clicks
+    unit: percent
+    direction: higher_better
+    channels: [sem, display, affiliate]
+
+  cpc:
+    name: CPC (Cost Per Click)
+    formula: Spend / Clicks
+    unit: USD
+    direction: lower_better
+    channels: [sem, display]
+
+  cpm:
+    name: CPM (Cost Per Mille)
+    formula: (Spend / Impressions) * 1000
+    unit: USD
+    direction: lower_better
+    channels: [display]
+
+  impression_share:
+    name: Impression Share
+    formula: Your Impressions / Eligible Impressions
+    unit: percent
+    direction: higher_better
+    channels: [sem]
+
+  avg_position:
+    name: Average Position
+    formula: Average ranking position in SERP
+    unit: number
+    direction: lower_better
+    channels: [seo]
+
+  epc:
+    name: EPC (Earnings Per Click)
+    formula: Revenue / Clicks
+    unit: USD
+    direction: higher_better
+    channels: [affiliate]
+
+  commission_rate:
+    name: Commission Rate
+    formula: Commission Paid / Revenue
+    unit: percent
+    direction: lower_better
+    channels: [affiliate]
+
+  viewability:
+    name: Viewability Rate
+    formula: Viewable Impressions / Measured Impressions
+    unit: percent
+    direction: higher_better
+    channels: [display]
+
+  new_customer_share:
+    name: New Customer Share
+    formula: New Customers / Total Customers
+    unit: percent
+    direction: higher_better
+    channels: [sem, display, affiliate]

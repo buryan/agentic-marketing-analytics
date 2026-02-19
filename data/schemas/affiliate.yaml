@@ -1,0 +1,10 @@
+name: Affiliate Platform Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Publisher: { type: string, required: true }
+  Clicks: { type: integer, min: 0, required: true }
+  Conversions: { type: integer, min: 0, required: true }
+  Revenue: { type: float, min: 0, required: true, unit: USD }
+  Commission: { type: float, min: 0, required: true, unit: USD }
+  New Customers: { type: integer, min: 0, required: false }
+  Category: { type: string, required: false }

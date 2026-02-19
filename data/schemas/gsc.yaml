@@ -1,0 +1,14 @@
+name: Google Search Console Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Page: { type: string, required: true }
+  Query: { type: string, required: false }
+  Clicks: { type: integer, min: 0, required: true }
+  Impressions: { type: integer, min: 0, required: true }
+  CTR: { type: float, min: 0, max: 1, required: true }
+  Position: { type: float, min: 1, required: true }
+  Device: { type: string, values: [MOBILE, DESKTOP, TABLET], required: false }
+  Country: { type: string, required: false }
+segmentation:
+  page_type: "Determined by URL pattern: /deal/ = deal page, /coupons/ = category, /merchant/ = merchant"
+  geo: "Determined by Country column or URL TLD"

@@ -1,0 +1,19 @@
+anomaly_detection:
+  method: z_score
+  threshold: 2.0
+  lookback_weeks: 8
+  min_data_points: 4  # minimum weeks needed before anomaly detection activates
+
+pacing:
+  alert_threshold_percent: 5  # flag if spend >5% ahead or behind linear pace
+  projection_method: linear  # project month-end spend based on current daily run rate
+
+traffic_light:
+  green: 0  # on plan or above
+  yellow: -5  # within 5% below plan
+  red: -5  # more than 5% below plan (anything below yellow threshold)
+
+comparison:
+  wow_day_alignment: true  # align WoW comparisons by day of week
+  yoy_day_alignment: true  # align YoY comparisons by day of week
+  minimum_delta_to_flag: 5  # only flag changes >5% in reports

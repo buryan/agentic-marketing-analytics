@@ -1,0 +1,98 @@
+google_ads:
+  source_identifier: "Columns contain Campaign, Ad Group, Impressions, Clicks, Cost"
+  required_columns:
+    - Date
+    - Campaign
+    - Impressions
+    - Clicks
+    - Cost
+    - Conversions
+    - Conversion Value
+  optional_columns:
+    - Ad Group
+    - Device
+    - Network
+    - Impression Share
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    ctr: { min: 0, max: 1 }
+    cpc: { min: 0, max: 100 }
+    cvr: { min: 0, max: 1 }
+    roas: { min: 0, max: 100 }
+    daily_spend_max: 200000
+  completeness:
+    type: daily
+    rule: "One row per campaign per date in requested range"
+
+google_search_console:
+  source_identifier: "Columns contain Query or Page, Impressions, Clicks, CTR, Position"
+  required_columns:
+    - Date
+    - Page
+    - Clicks
+    - Impressions
+    - CTR
+    - Position
+  optional_columns:
+    - Query
+    - Device
+    - Country
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    ctr: { min: 0, max: 1 }
+    position: { min: 1, max: 200 }
+  completeness:
+    type: daily
+    rule: "One row per page per date in requested range"
+
+affiliate_export:
+  source_identifier: "Columns contain Publisher, Clicks, Sales or Conversions, Commission"
+  required_columns:
+    - Date
+    - Publisher
+    - Clicks
+    - Conversions
+    - Revenue
+    - Commission
+  optional_columns:
+    - New Customers
+    - Category
+    - Sub Publisher
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    commission_rate: { min: 0, max: 0.5 }
+    epc: { min: 0, max: 50 }
+  completeness:
+    type: daily
+    rule: "One row per publisher per date in requested range"
+
+display_export:
+  source_identifier: "Columns contain Insertion Order or Line Item, Impressions, CPM or Cost"
+  required_columns:
+    - Date
+    - Campaign
+    - Impressions
+    - Clicks
+    - Cost
+  optional_columns:
+    - Viewable Impressions
+    - Video Completions
+    - Conversions
+    - Revenue
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    ctr: { min: 0, max: 0.05 }
+    cpm: { min: 0, max: 100 }
+    viewability: { min: 0, max: 1 }
+  completeness:
+    type: daily
+    rule: "One row per campaign per date in requested range"
+
+screenshot:
+  source_identifier: "Image file (PNG, JPG, JPEG)"
+  validation:
+    - Image must be readable
+    - Extract all visible metrics
+    - Tag extracted values with [FROM SCREENSHOT]
+    - Cross-reference with CSV data if both present for same period
+    - Flag discrepancies >2%
