@@ -1,5 +1,72 @@
 # Prompt Changelog
 
+## v3.1 - 2026-02-20
+Added Pricing & Promotions agent as a new standalone channel group.
+
+### Added
+- **agents/pricing/promo-impact.md** — Pricing & Promotions impact agent analyzing promo ROI, discount efficiency, incremental lift, and cannibalization
+- **data/schemas/promo.yaml** — Data schema for promo export CSVs
+- **memory/baselines/pricing-weekly-baselines.md** — Empty baseline template
+
+### Changed
+- **config/schemas/channel-output.json** — Added `promo` to channel enum, `pricing` to channel_group enum, added promo extended_metrics (discount_rate, redemption_rate, promo_roi, incremental_lift_pct, cannibalization_rate)
+- **config/schemas/group-synthesis-output.json** — Added `pricing` to group enum
+- **config/metrics.yaml** — Added 5 promo metrics (discount_rate, redemption_rate, promo_roi, incremental_lift_pct, cannibalization_rate)
+- **config/benchmarks.yaml** — Added promo benchmarks
+- **config/data-quality-rules.yaml** — Added promo_export validation rules
+- **run_analysis.py** — Added pricing group to all mappings (CHANNEL_GROUPS, GROUP_CHANNELS, CHANNEL_AGENT_MAP, GROUP_SYNTHESIS_MAP, ROUTING_TABLE, FILE_PREFIX_MAP, CHANNEL_BASELINE_MAP)
+- **scripts/preprocess.py** — Added promo source signature and column aliases
+- **scripts/validate_data.py** — Added promo to SOURCE_SCHEMA_MAP and SOURCE_RULES_MAP
+- **agents/orchestrator.md** — Added Pricing row to Channel Groups table and routing keywords
+
+## v3.0 - 2026-02-20
+Channel-group architecture: scale from 4 channels to 19 with 2-layer synthesis.
+
+### Added
+- **Channel Groups** — 4 groups (Paid, Lifecycle, Organic, Distribution) organizing 14 channels with agents + 5 unattributed channels
+- **2-Layer Synthesis** — Group synthesis agents (parallel, per group with 2+ channels) + top-level cross-group synthesis (conditional, 2+ groups)
+- **9-Step Pipeline** — CLASSIFY → PREPROCESS → VALIDATE → DISPATCH → GROUP_SYNTH → HYPOTHESIZE → TOP_SYNTH → FORMAT → MEMORY (up from 7)
+- **agents/paid/metasearch.md** — Metasearch channel agent (Google Hotel Ads, TripAdvisor, Trivago, Kayak)
+- **agents/paid/synthesis.md** — Paid group synthesis (spend allocation, creative cross-pollination, cannibalization)
+- **agents/lifecycle/crm.md** — CRM agent handling email + push_notification + sms (shared audience/tooling)
+- **agents/lifecycle/synthesis.md** — Lifecycle group synthesis (message frequency, channel preference, opt-out correlation)
+- **agents/organic/earned.md** — Earned agent handling managed_social + free_referral
+- **agents/organic/synthesis.md** — Organic group synthesis (content performance, brand awareness, paid/organic cannibalization)
+- **agents/distribution/distribution.md** — Distribution agent handling distribution + paid_user_referral
+- **config/schemas/group-synthesis-output.json** — Group synthesis output contract (group summary card, channel mix, contradictions, actions)
+- **data/schemas/** — 6 new data schemas: email.yaml, push.yaml, sms.yaml, metasearch.yaml, promoted-social.yaml, distribution.yaml
+
+### Changed
+- **run_analysis.py** — Complete rewrite: CHANNEL_GROUPS, GROUP_CHANNELS, CHANNEL_AGENT_MAP, GROUP_SYNTHESIS_MAP, FILE_PREFIX_MAP, 9-step pipeline with group synthesis dispatch, `determine_synthesis_levels()`, ROUTING_TABLE expanded from 8→21 entries
+- **scripts/preprocess.py** — SOURCE_SIGNATURES expanded from 4→12, COLUMN_ALIASES extended for CRM/social/metasearch/distribution
+- **scripts/validate_data.py** — SOURCE_SCHEMA_MAP and SOURCE_RULES_MAP expanded from 4→12 entries
+- **config/schemas/channel-output.json** — Channel enum expanded to 17 values, added `channel_group` field, added `extended_metrics` object (CRM/social/distribution KPIs)
+- **config/schemas/synthesis-output.json** — Added `groups[]` array (group summary cards), `attribution_coverage` object
+- **config/metrics.yaml** — Added CRM metrics (open_rate, click_rate, unsubscribe_rate, deliverability_rate, send_volume), social metrics (engagement_rate, social_reach, video_completion_rate), distribution metrics (take_rate, referral_incentive_cost), metasearch (avg_bid, booking_rate)
+- **config/benchmarks.yaml** — Added benchmarks for 8 new channels
+- **config/data-quality-rules.yaml** — Added validation rules for 6 new source types
+- **agents/paid/sem.md** — Extended to handle brand_campaign channel
+- **agents/paid/display.md** — Extended to handle promoted_social, added social-specific metrics
+- **agents/hypothesis.md** — Added CRM, social, distribution, metasearch hypothesis categories
+- **agents/orchestrator.md** — Complete rewrite with 4-group routing table, 9-step pipeline, synthesis trigger rules
+- **agents/cross-channel/synthesis.md** — Refactored to top-level cross-group synthesis consuming group summary cards, added attribution coverage analysis
+- **CLAUDE.md** — Updated for v3.0: 4 channel groups, 9-step pipeline, 2-layer synthesis, updated extension protocol
+
+### Moved
+- **agents/seo/content-seo.md** → **agents/organic/content-seo.md** (added channel group annotation)
+
+### Removed
+- **agents/seo/** directory — Replaced by agents/organic/
+
+### Architecture Decisions
+- Affiliate stays in Paid group (commission-based, paid media economics)
+- Promoted Social handled by Display agent (shared impression/creative optimization logic)
+- Managed Social separate from Promoted Social in Organic group (different economics and goals)
+- Direct traffic = attribution metric only in top-level synthesis (no agent)
+- Distribution group has no group synthesis (too thin — only 2 channels, 1 agent)
+- CRM agent handles all 3 lifecycle channels (shared audience, shared tooling, message fatigue logic)
+- Agent count: 8 channel + 3 group synthesis + 1 top-level synthesis + hypothesis + orchestrator = 13 total (up from 7)
+
 ## v2.0 - 2026-02-20
 Architecture overhaul based on AI architecture review. Addresses the 10 critical findings.
 

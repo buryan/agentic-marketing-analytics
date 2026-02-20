@@ -1,0 +1,14 @@
+name: Promoted Social Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Campaign: { type: string, required: true }
+  Impressions: { type: integer, min: 0, required: true }
+  Clicks: { type: integer, min: 0, required: true }
+  Cost: { type: float, min: 0, required: true, unit: USD }
+  Reach: { type: integer, min: 0, required: false }
+  Engagement: { type: integer, min: 0, required: false }
+  Video Views: { type: integer, min: 0, required: false }
+  Video Completions: { type: integer, min: 0, required: false }
+  Conversions: { type: integer, min: 0, required: false }
+  Revenue: { type: float, min: 0, required: false, unit: USD }
+  Platform: { type: string, required: false }

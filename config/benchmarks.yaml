@@ -34,3 +34,49 @@ seo:
   intl:
     ctr_position_1: 0.25
     ctr_position_3: 0.10
+
+metasearch:
+  cpc: 0.80
+  booking_rate: 0.03
+  roas: 5.0
+
+promoted_social:
+  cpm: 8.00
+  ctr: 0.012
+  engagement_rate: 0.03
+  video_completion_rate: 0.25
+  roas: 2.5
+
+email:
+  open_rate: 0.22
+  click_rate: 0.035
+  unsubscribe_rate: 0.002
+  deliverability_rate: 0.97
+
+push_notification:
+  open_rate: 0.05
+  click_rate: 0.02
+  deliverability_rate: 0.95
+
+sms:
+  click_rate: 0.10
+  unsubscribe_rate: 0.005
+  deliverability_rate: 0.98
+
+managed_social:
+  engagement_rate: 0.02
+  reach_growth_rate: 0.05
+
+distribution:
+  take_rate: 0.85
+  avg_commission_rate: 0.15
+
+paid_user_referral:
+  referral_incentive_cost: 15.00
+  cvr: 0.20
+
+promo:
+  discount_rate: { low: 0.10, median: 0.20, high: 0.35 }
+  redemption_rate: { low: 0.05, median: 0.15, high: 0.30 }
+  promo_roi: { low: 0.5, median: 2.0, high: 5.0 }
+  incremental_lift_pct: { low: 5, median: 15, high: 40 }

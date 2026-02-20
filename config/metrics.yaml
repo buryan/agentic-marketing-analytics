@@ -99,3 +99,127 @@ metrics:
     unit: percent
     direction: higher_better
     channels: [sem, display, affiliate]
+
+  # CRM / Lifecycle metrics
+  open_rate:
+    name: Open Rate
+    formula: Opens / Delivered
+    unit: percent
+    direction: higher_better
+    channels: [email, push_notification]
+
+  click_rate:
+    name: Click Rate (CRM)
+    formula: Clicks / Delivered
+    unit: percent
+    direction: higher_better
+    channels: [email, push_notification, sms]
+
+  unsubscribe_rate:
+    name: Unsubscribe Rate
+    formula: Unsubscribes / Delivered
+    unit: percent
+    direction: lower_better
+    channels: [email, sms]
+
+  deliverability_rate:
+    name: Deliverability Rate
+    formula: Delivered / Sent
+    unit: percent
+    direction: higher_better
+    channels: [email, push_notification, sms]
+
+  send_volume:
+    name: Send Volume
+    formula: Total messages sent
+    unit: count
+    direction: context_dependent
+    channels: [email, push_notification, sms]
+
+  # Social metrics
+  engagement_rate:
+    name: Engagement Rate
+    formula: (Likes + Comments + Shares) / Reach
+    unit: percent
+    direction: higher_better
+    channels: [managed_social, promoted_social]
+
+  social_reach:
+    name: Social Reach
+    formula: Unique users who saw content
+    unit: count
+    direction: higher_better
+    channels: [managed_social, promoted_social]
+
+  video_completion_rate:
+    name: Video Completion Rate
+    formula: Video Completions / Video Starts
+    unit: percent
+    direction: higher_better
+    channels: [display, promoted_social]
+
+  # Distribution / Partnership metrics
+  distribution_take_rate:
+    name: Distribution Take Rate
+    formula: Net Revenue / Gross Revenue
+    unit: percent
+    direction: higher_better
+    channels: [distribution]
+
+  referral_incentive_cost:
+    name: Referral Incentive Cost
+    formula: Total incentives paid / Referred conversions
+    unit: USD
+    direction: lower_better
+    channels: [paid_user_referral]
+
+  # Metasearch metrics
+  avg_bid:
+    name: Average Bid
+    formula: Total bid spend / Total auctions
+    unit: USD
+    direction: context_dependent
+    channels: [metasearch]
+
+  booking_rate:
+    name: Booking Rate
+    formula: Bookings / Clicks
+    unit: percent
+    direction: higher_better
+    channels: [metasearch]
+
+  # Pricing & Promotions metrics
+  discount_rate:
+    name: Discount Rate
+    formula: Discount Amount / Gross Revenue
+    unit: ratio
+    direction: lower_better
+    channels: [promo]
+
+  redemption_rate:
+    name: Redemption Rate
+    formula: Redemptions / Eligible Users
+    unit: ratio
+    direction: higher_better
+    channels: [promo]
+
+  promo_roi:
+    name: Promo ROI
+    formula: (Incremental Revenue - Discount Cost) / Discount Cost
+    unit: ratio
+    direction: higher_better
+    channels: [promo]
+
+  incremental_lift_pct:
+    name: Incremental Lift %
+    formula: (Promo Revenue - Baseline Revenue) / Baseline Revenue
+    unit: percentage
+    direction: higher_better
+    channels: [promo]
+
+  cannibalization_rate:
+    name: Cannibalization Rate
+    formula: Estimated Base Sales Lost / Total Promo Orders
+    unit: ratio
+    direction: lower_better
+    channels: [promo]

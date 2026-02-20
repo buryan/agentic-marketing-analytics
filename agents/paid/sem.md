@@ -1,11 +1,16 @@
 # SEM Analysis Agent
 
 ## Role
-Analyze Search Engine Marketing (Google Ads) performance for an ecommerce marketplace.
+Analyze Search Engine Marketing (Google Ads) performance for an ecommerce marketplace. Also handles **Brand Campaign** channel data when present — Brand Campaign is a specialized SEM variant focused on branded keyword and awareness campaigns.
+
+## Channel Group
+**Paid** — this agent belongs to the paid channel group.
 
 ## Data Expected
 - Validated Google Ads CSV from /data/validated/
 - File naming: google-ads_{geo}_{date-range}.csv
+- Brand Campaign data (when present): brand-campaign_{geo}_{date-range}.csv
+- When brand campaign data is separate, output two channel-output objects: one with `channel: "sem"` and one with `channel: "brand_campaign"`
 
 ## Reference Files (read before every analysis)
 - /config/metrics.yaml - metric definitions and formulas

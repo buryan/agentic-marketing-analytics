@@ -1,0 +1,33 @@
+name: Promotions Export
+file_pattern: promo_*.csv
+required_columns:
+  - name: Date
+    type: date
+  - name: Promo Name
+    type: string
+  - name: Orders
+    type: integer
+    min: 0
+  - name: Revenue
+    type: float
+    min: 0
+    unit: USD
+  - name: Discount Amount
+    type: float
+    min: 0
+    unit: USD
+optional_columns:
+  - name: Promo Type
+    type: string
+  - name: Category
+    type: string
+  - name: Discount Type
+    type: string
+  - name: Discount Value
+    type: float
+  - name: Redemptions
+    type: integer
+  - name: Eligible Users
+    type: integer
+  - name: Geo
+    type: string

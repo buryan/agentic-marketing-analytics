@@ -1,0 +1,11 @@
+name: Distribution Channel Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Partner: { type: string, required: true }
+  Transactions: { type: integer, min: 0, required: true }
+  Revenue: { type: float, min: 0, required: true, unit: USD }
+  Commission: { type: float, min: 0, required: true, unit: USD }
+  Category: { type: string, required: false }
+  Net Revenue: { type: float, min: 0, required: false, unit: USD }
+  New Customers: { type: integer, min: 0, required: false }
+  Geo: { type: string, required: false }

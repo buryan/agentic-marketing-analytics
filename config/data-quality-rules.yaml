@@ -88,6 +88,168 @@ display_export:
     type: daily
     rule: "One row per campaign per date in requested range"
 
+metasearch_export:
+  source_identifier: "Columns contain Hotel or Property, Impressions, Clicks, Bookings or Conversions"
+  required_columns:
+    - Date
+    - Campaign
+    - Impressions
+    - Clicks
+    - Cost
+  optional_columns:
+    - Bookings
+    - Revenue
+    - Platform
+    - Property
+    - Avg Bid
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    ctr: { min: 0, max: 0.15 }
+    cpc: { min: 0, max: 50 }
+    booking_rate: { min: 0, max: 0.3 }
+  completeness:
+    type: daily
+    rule: "One row per campaign per date in requested range"
+
+promoted_social_export:
+  source_identifier: "Columns contain Platform or Ad Set, Impressions, Reach, Engagement"
+  required_columns:
+    - Date
+    - Campaign
+    - Impressions
+    - Clicks
+    - Cost
+  optional_columns:
+    - Reach
+    - Engagement
+    - Video Views
+    - Video Completions
+    - Conversions
+    - Revenue
+    - Platform
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    ctr: { min: 0, max: 0.10 }
+    cpm: { min: 0, max: 100 }
+    engagement_rate: { min: 0, max: 0.50 }
+  completeness:
+    type: daily
+    rule: "One row per campaign per date in requested range"
+
+email_export:
+  source_identifier: "Columns contain Subject or Campaign, Sent, Delivered, Opens, Clicks"
+  required_columns:
+    - Date
+    - Campaign
+    - Sent
+    - Delivered
+    - Opens
+    - Clicks
+  optional_columns:
+    - Unsubscribes
+    - Bounces
+    - Conversions
+    - Revenue
+    - Campaign Type
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    open_rate: { min: 0, max: 1 }
+    click_rate: { min: 0, max: 1 }
+    unsubscribe_rate: { min: 0, max: 0.1 }
+    deliverability_rate: { min: 0.5, max: 1 }
+  completeness:
+    type: daily
+    rule: "One row per campaign per send date"
+
+push_export:
+  source_identifier: "Columns contain Push or Notification, Sent, Delivered, Opens"
+  required_columns:
+    - Date
+    - Campaign
+    - Sent
+    - Delivered
+    - Opens
+  optional_columns:
+    - Clicks
+    - Conversions
+    - Revenue
+    - Platform
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    open_rate: { min: 0, max: 0.5 }
+    click_rate: { min: 0, max: 0.5 }
+    deliverability_rate: { min: 0.5, max: 1 }
+  completeness:
+    type: daily
+    rule: "One row per campaign per send date"
+
+sms_export:
+  source_identifier: "Columns contain SMS or Message, Sent, Delivered, Clicks"
+  required_columns:
+    - Date
+    - Campaign
+    - Sent
+    - Delivered
+  optional_columns:
+    - Clicks
+    - Conversions
+    - Revenue
+    - Unsubscribes
+    - Opt Outs
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    click_rate: { min: 0, max: 0.5 }
+    unsubscribe_rate: { min: 0, max: 0.1 }
+    deliverability_rate: { min: 0.5, max: 1 }
+  completeness:
+    type: daily
+    rule: "One row per campaign per send date"
+
+distribution_export:
+  source_identifier: "Columns contain Partner or Distribution, Transactions, Revenue, Commission"
+  required_columns:
+    - Date
+    - Partner
+    - Transactions
+    - Revenue
+    - Commission
+  optional_columns:
+    - Category
+    - Net Revenue
+    - New Customers
+    - Geo
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    commission_rate: { min: 0, max: 0.5 }
+    take_rate: { min: 0.5, max: 1 }
+  completeness:
+    type: daily
+    rule: "One row per partner per date in requested range"
+
+promo_export:
+  source_identifier: "Columns contain Promo Name or Promotion, Orders, Revenue, Discount Amount"
+  required_columns:
+    - Date
+    - Promo Name
+    - Orders
+    - Revenue
+    - Discount Amount
+  optional_columns:
+    - Promo Type
+    - Category
+    - Discount Type
+    - Discount Value
+    - Redemptions
+    - Eligible Users
+    - Geo
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    discount_rate: { min: 0, max: 0.8 }
+    redemption_rate: { min: 0, max: 1 }
+  completeness:
+    type: daily
+    rule: "One row per promo per date in requested range"
+
 screenshot:
   source_identifier: "Image file (PNG, JPG, JPEG)"
   validation:

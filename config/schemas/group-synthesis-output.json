@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "group-synthesis-output.json",
+  "title": "Group Synthesis Agent Output",
+  "description": "Structured output from a channel-group synthesis agent. Provides intra-group mix efficiency, contradiction detection, and ICE-scored action items scoped to a single channel group.",
+  "type": "object",
+  "required": ["group", "group_summary", "channel_mix", "contradictions", "actions"],
+  "additionalProperties": false,
+  "properties": {
+    "group": {
+      "type": "string",
+      "enum": ["paid", "lifecycle", "organic", "distribution", "pricing"],
+      "description": "The channel group this synthesis covers."
+    },
+    "group_summary": {
+      "type": "object",
+      "description": "High-level summary card for this group. Used by top-level synthesis for cross-group comparison.",
+      "required": ["total_spend", "total_revenue", "channels_analyzed", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "total_spend": {
+          "type": ["number", "null"],
+          "description": "Sum of spend across all channels in this group. Null for groups without spend (organic)."
+        },
+        "total_revenue": {
+          "type": ["number", "null"],
+          "description": "Sum of attributed revenue across all channels in this group."
+        },
+        "blended_roas": {
+          "type": ["number", "null"],
+          "description": "Group-level ROAS (total_revenue / total_spend). Null if total_spend is 0 or null."
+        },
+        "channel_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of channels analyzed in this group."
+        },
+        "channels_analyzed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of channel names that were analyzed."
+        },
+        "top_issue": {
+          "type": ["string", "null"],
+          "description": "Most significant issue found in this group. Null if no issues."
+        },
+        "top_opportunity": {
+          "type": ["string", "null"],
+          "description": "Biggest optimization opportunity in this group. Null if none identified."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["GREEN", "YELLOW", "RED"],
+          "description": "Overall group health: GREEN = on track, YELLOW = needs attention, RED = critical."
+        }
+      }
+    },
+    "channel_mix": {
+      "type": "array",
+      "description": "Intra-group channel mix showing spend/revenue allocation and efficiency.",
+      "items": {
+        "type": "object",
+        "required": ["channel", "spend", "spend_share", "revenue", "revenue_share", "roas", "efficiency"],
+        "additionalProperties": false,
+        "properties": {
+          "channel": { "type": "string" },
+          "spend": { "type": "number", "minimum": 0 },
+          "spend_share": { "type": "number", "minimum": 0, "maximum": 1 },
+          "revenue": { "type": "number", "minimum": 0 },
+          "revenue_share": { "type": "number", "minimum": 0, "maximum": 1 },
+          "roas": { "type": "number" },
+          "efficiency": { "type": "number", "description": "Revenue Share / Spend Share. >1.0 = above weight." }
+        }
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "description": "Intra-group contradictions or data inconsistencies. Same structure as cross-channel synthesis.",
+      "items": {
+        "type": "object",
+        "required": ["type", "description", "values", "resolution"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string" },
+          "description": { "type": "string" },
+          "values": { "type": "object", "additionalProperties": true },
+          "resolution": { "type": "string" }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "ICE-scored actions scoped to this group. Top 3 per group.",
+      "items": {
+        "type": "object",
+        "required": ["action", "impact", "confidence", "ease", "ice_score", "channel", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "action": { "type": "string" },
+          "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "ease": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "ice_score": { "type": "integer", "minimum": 1, "maximum": 125 },
+          "channel": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    }
+  }
+}

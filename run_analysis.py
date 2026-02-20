@@ -2,18 +2,21 @@
 """
 Marketing Analytics Orchestrator — Master pipeline runner.
 
-Enforces the mandatory 7-step analysis chain:
+Enforces the mandatory 9-step analysis chain:
 1. CLASSIFY — Determine intent from user query (keyword match + LLM fallback)
 2. PREPROCESS — Standardize new input files (Python script)
 3. VALIDATE — Data quality gate (Python script, FAIL = block)
 4. DISPATCH — Route to channel agent(s), parallel when possible
-5. HYPOTHESIZE — Explain metric movements (sequential, after all channels)
-6. SYNTHESIZE — Cross-channel view (conditional, if 2+ channels)
-7. FORMAT + MEMORY UPDATE — Select template, render output, update baselines
+5. GROUP SYNTHESIZE — Intra-group synthesis (parallel across groups, if 2+ channels in group)
+6. HYPOTHESIZE — Explain metric movements (sequential, after all channels + group synthesis)
+7. TOP SYNTHESIZE — Cross-group synthesis (conditional, if 2+ groups)
+8. FORMAT — Select template, render output
+9. MEMORY UPDATE — Update baselines, log decisions
 
 Usage:
     python run_analysis.py "How did SEM perform last week?"
     python run_analysis.py "Compare all channels WoW"
+    python run_analysis.py "How is email performing?"
     python run_analysis.py --channels sem,display --period 2026-02-10/2026-02-16
     python run_analysis.py --preprocess-only          # just run steps 1-3
     python run_analysis.py --skip-preprocess           # skip steps 1-2 if data is already clean
@@ -42,65 +45,206 @@ TEMPLATES_DIR = PROJECT_ROOT / "templates"
 SCHEMAS_DIR = PROJECT_ROOT / "config" / "schemas"
 
 # ─────────────────────────────────────────────
+# CHANNEL GROUPS & MAPPINGS
+# ─────────────────────────────────────────────
+
+CHANNEL_GROUPS = {
+    "sem": "paid",
+    "brand_campaign": "paid",
+    "display": "paid",
+    "promoted_social": "paid",
+    "metasearch": "paid",
+    "affiliate": "paid",
+    "email": "lifecycle",
+    "push_notification": "lifecycle",
+    "sms": "lifecycle",
+    "seo": "organic",
+    "free_referral": "organic",
+    "managed_social": "organic",
+    "distribution": "distribution",
+    "paid_user_referral": "distribution",
+    "promo": "pricing",
+}
+
+GROUP_CHANNELS = {
+    "paid": ["sem", "brand_campaign", "display", "promoted_social", "metasearch", "affiliate"],
+    "lifecycle": ["email", "push_notification", "sms"],
+    "organic": ["seo", "free_referral", "managed_social"],
+    "distribution": ["distribution", "paid_user_referral"],
+    "pricing": ["promo"],
+}
+
+CHANNEL_AGENT_MAP = {
+    "sem": "agents/paid/sem.md",
+    "brand_campaign": "agents/paid/sem.md",
+    "display": "agents/paid/display.md",
+    "promoted_social": "agents/paid/display.md",
+    "metasearch": "agents/paid/metasearch.md",
+    "affiliate": "agents/paid/affiliate.md",
+    "email": "agents/lifecycle/crm.md",
+    "push_notification": "agents/lifecycle/crm.md",
+    "sms": "agents/lifecycle/crm.md",
+    "seo": "agents/organic/content-seo.md",
+    "free_referral": "agents/organic/earned.md",
+    "managed_social": "agents/organic/earned.md",
+    "distribution": "agents/distribution/distribution.md",
+    "paid_user_referral": "agents/distribution/distribution.md",
+    "promo": "agents/pricing/promo-impact.md",
+}
+
+GROUP_SYNTHESIS_MAP = {
+    "paid": "agents/paid/synthesis.md",
+    "lifecycle": "agents/lifecycle/synthesis.md",
+    "organic": "agents/organic/synthesis.md",
+    "distribution": None,  # Too thin for group synthesis
+    "pricing": None,  # Single channel, too thin for group synthesis
+}
+
+CHANNEL_BASELINE_MAP = {
+    "sem": "memory/baselines/sem-weekly-baselines.md",
+    "brand_campaign": "memory/baselines/sem-weekly-baselines.md",
+    "display": "memory/baselines/display-weekly-baselines.md",
+    "promoted_social": "memory/baselines/display-weekly-baselines.md",
+    "metasearch": "memory/baselines/metasearch-weekly-baselines.md",
+    "affiliate": "memory/baselines/affiliate-monthly-baselines.md",
+    "email": "memory/baselines/email-weekly-baselines.md",
+    "push_notification": "memory/baselines/push-weekly-baselines.md",
+    "sms": "memory/baselines/sms-weekly-baselines.md",
+    "seo": "memory/baselines/seo-weekly-baselines.md",
+    "free_referral": "memory/baselines/referral-weekly-baselines.md",
+    "managed_social": "memory/baselines/social-weekly-baselines.md",
+    "distribution": "memory/baselines/distribution-monthly-baselines.md",
+    "paid_user_referral": "memory/baselines/distribution-monthly-baselines.md",
+    "promo": "memory/baselines/pricing-weekly-baselines.md",
+}
+
+# File prefix -> channel mapping for data detection
+FILE_PREFIX_MAP = {
+    "google-ads": "sem",
+    "brand-campaign": "brand_campaign",
+    "gsc": "seo",
+    "affiliate": "affiliate",
+    "display": "display",
+    "social-paid": "promoted_social",
+    "metasearch": "metasearch",
+    "email": "email",
+    "push": "push_notification",
+    "sms": "sms",
+    "social-organic": "managed_social",
+    "referral": "free_referral",
+    "distribution": "distribution",
+    "referral-program": "paid_user_referral",
+    "promo": "promo",
+}
+
+# ─────────────────────────────────────────────
 # ROUTING TABLE
 # ─────────────────────────────────────────────
 
 ROUTING_TABLE = [
+    # --- Paid Search ---
     {
         "keywords": ["sem", "google ads", "paid search", "cpc", "roas", "search ads", "adwords"],
         "channels": ["sem"],
-        "agent_prompts": ["agents/paid/sem.md"],
-        "also_invoke": ["agents/hypothesis.md"],
     },
+    {
+        "keywords": ["brand campaign", "branded", "brand search"],
+        "channels": ["brand_campaign"],
+    },
+    # --- Paid Media ---
     {
         "keywords": ["display", "programmatic", "dv360", "cpm", "banner", "viewability"],
         "channels": ["display"],
-        "agent_prompts": ["agents/paid/display.md"],
-        "also_invoke": ["agents/hypothesis.md"],
     },
     {
-        "keywords": ["affiliate", "publisher", "commission", "epc", "partner"],
+        "keywords": ["paid social", "social ads", "facebook ads", "instagram ads", "tiktok ads"],
+        "channels": ["promoted_social"],
+    },
+    {
+        "keywords": ["metasearch", "hotel ads", "tripadvisor", "trivago", "kayak"],
+        "channels": ["metasearch"],
+    },
+    # --- Affiliate ---
+    {
+        "keywords": ["affiliate", "publisher", "commission", "epc"],
         "channels": ["affiliate"],
-        "agent_prompts": ["agents/paid/affiliate.md"],
-        "also_invoke": ["agents/hypothesis.md"],
+    },
+    # --- Lifecycle/CRM ---
+    {
+        "keywords": ["email", "newsletter", "mailchimp", "braze", "email marketing"],
+        "channels": ["email"],
     },
     {
-        "keywords": ["seo", "organic", "rankings", "gsc", "search console", "position",
+        "keywords": ["push", "push notification", "app notification", "mobile push"],
+        "channels": ["push_notification"],
+    },
+    {
+        "keywords": ["sms", "text message", "mms"],
+        "channels": ["sms"],
+    },
+    {
+        "keywords": ["crm", "lifecycle", "managed channels", "owned channels", "retention"],
+        "channels": ["email", "push_notification", "sms"],
+    },
+    # --- Organic ---
+    {
+        "keywords": ["seo", "organic search", "rankings", "gsc", "search console", "position",
                       "crawl", "indexing", "page speed", "core web vitals", "technical seo"],
         "channels": ["seo"],
-        "agent_prompts": ["agents/seo/content-seo.md"],
-        "also_invoke": ["agents/hypothesis.md"],
     },
+    {
+        "keywords": ["organic social", "social media", "community", "managed social"],
+        "channels": ["managed_social"],
+    },
+    {
+        "keywords": ["referral", "word of mouth", "organic referral"],
+        "channels": ["free_referral"],
+    },
+    # --- Distribution ---
+    {
+        "keywords": ["distribution", "white label", "syndication"],
+        "channels": ["distribution"],
+    },
+    {
+        "keywords": ["referral program", "refer a friend", "user referral", "referral incentive"],
+        "channels": ["paid_user_referral"],
+    },
+    # --- Pricing & Promotions ---
+    {
+        "keywords": ["pricing", "promo", "promotion", "discount", "coupon", "voucher",
+                      "deal impact", "offer", "sale event", "promo roi", "promo impact"],
+        "channels": ["promo"],
+    },
+    # --- Self-Contained ---
     {
         "keywords": ["incrementality", "incrementality test", "mroas", "troas test", "split test"],
         "channels": ["sem-incrementality"],
-        "agent_prompts": ["agents/paid/sem-incrementality.md"],
-        "also_invoke": [],  # Self-contained
         "self_contained": True,
     },
+    # --- Group-Level ---
+    {
+        "keywords": ["paid", "paid channels", "paid media"],
+        "channels": ["sem", "brand_campaign", "display", "promoted_social", "metasearch", "affiliate"],
+    },
+    {
+        "keywords": ["organic", "organic channels"],
+        "channels": ["seo", "free_referral", "managed_social"],
+    },
+    # --- All Channels ---
     {
         "keywords": ["overall", "all channels", "mix", "compare channels", "total",
-                      "blended", "paid", "paid channels", "paid media"],
-        "channels": ["sem", "display", "affiliate", "seo"],
-        "agent_prompts": [
-            "agents/paid/sem.md",
-            "agents/paid/display.md",
-            "agents/paid/affiliate.md",
-            "agents/seo/content-seo.md",
-        ],
-        "also_invoke": ["agents/hypothesis.md", "agents/cross-channel/synthesis.md"],
+                      "blended", "portfolio"],
+        "channels": [],  # All available
+        "all_channels": True,
     },
     {
         "keywords": ["budget", "pacing", "spend"],
-        "channels": ["sem", "display", "affiliate"],
-        "agent_prompts": [],  # Route to relevant channel agent based on available data
-        "also_invoke": [],
+        "channels": ["sem", "display", "metasearch", "affiliate"],
     },
     {
-        "keywords": ["anomal", "alert", "flag", "unusual"],  # "anomal" matches anomaly/anomalies/anomalous
-        "channels": [],  # Route to all channels with available data
-        "agent_prompts": [],
-        "also_invoke": ["agents/hypothesis.md"],
+        "keywords": ["anomal", "alert", "flag", "unusual"],
+        "channels": [],  # All available
+        "all_channels": True,
     },
 ]
 
@@ -127,10 +271,10 @@ def classify_query(query: str) -> dict:
     Returns:
         {
             "channels": ["sem", "display", ...],
-            "agent_prompts": ["agents/paid/sem.md", ...],
-            "also_invoke": ["agents/hypothesis.md", ...],
+            "groups": ["paid", "lifecycle", ...],
             "template": "templates/weekly-report.md",
             "self_contained": False,
+            "all_channels": False,
             "match_type": "keyword" | "fallback",
             "date_range": {"current": "...", "prior": "..."} | None,
             "comparison_type": "wow" | "mom" | "yoy",
@@ -150,20 +294,22 @@ def classify_query(query: str) -> dict:
             best_match_count = match_count
 
     if best_match and best_match_count > 0:
+        channels = best_match["channels"]
+        groups = list(set(CHANNEL_GROUPS.get(ch, "") for ch in channels if ch in CHANNEL_GROUPS))
         result = {
-            "channels": best_match["channels"],
-            "agent_prompts": best_match["agent_prompts"],
-            "also_invoke": best_match.get("also_invoke", []),
+            "channels": channels,
+            "groups": [g for g in groups if g],
             "self_contained": best_match.get("self_contained", False),
+            "all_channels": best_match.get("all_channels", False),
             "match_type": "keyword",
         }
     else:
         # Fallback: no keyword match. Default to listing available data.
         result = {
             "channels": [],
-            "agent_prompts": [],
-            "also_invoke": [],
+            "groups": [],
             "self_contained": False,
+            "all_channels": False,
             "match_type": "fallback",
         }
 
@@ -183,13 +329,7 @@ def classify_query(query: str) -> dict:
 
 
 def select_template(query_lower: str) -> str:
-    """Select output template based on query keywords and analysis results.
-
-    Decision matrix:
-    - anomaly-alert: if query mentions anomaly/alert/flag/unusual
-    - period-comparison: if query mentions compare/vs/comparison
-    - weekly-report: default for everything else
-    """
+    """Select output template based on query keywords."""
     for keyword, template in TEMPLATE_RULES.items():
         if keyword == "default":
             continue
@@ -218,13 +358,10 @@ def select_template_from_results(query_lower: str, channel_outputs: list[dict]) 
 
 def parse_date_range(query: str) -> dict | None:
     """Extract date range from query string."""
-    # Match patterns like "2026-02-10 to 2026-02-16" or "Feb 10 - Feb 16"
     iso_pattern = r"(\d{4}-\d{2}-\d{2})\s*(?:to|through|thru|-)\s*(\d{4}-\d{2}-\d{2})"
     match = re.search(iso_pattern, query)
     if match:
         return {"current_start": match.group(1), "current_end": match.group(2)}
-
-    # "last week", "this week", etc. — return None to let agents use defaults
     return None
 
 
@@ -241,7 +378,6 @@ def parse_geo(query: str) -> str:
     """Determine geography filter from query."""
     if any(kw in query for kw in ["intl", "international", "non-us", "global"]):
         return "INTL"
-    # Match "na" as a standalone word (start, end, or surrounded by spaces/punctuation)
     if re.search(r"\bna\b", query) or any(kw in query for kw in ["north america", "us only", "domestic"]):
         return "NA"
     return "ALL"
@@ -296,21 +432,17 @@ def run_validation() -> dict:
 # ─────────────────────────────────────────────
 
 def get_available_data() -> dict[str, list[str]]:
-    """Scan /data/validated/ for available data files, grouped by source."""
+    """Scan /data/validated/ for available data files, grouped by channel."""
     available = {}
     if not DATA_VALIDATED.exists():
         return available
 
     for f in DATA_VALIDATED.glob("*.csv"):
         name = f.name.lower()
-        if name.startswith("google-ads"):
-            available.setdefault("sem", []).append(str(f))
-        elif name.startswith("gsc"):
-            available.setdefault("seo", []).append(str(f))
-        elif name.startswith("affiliate"):
-            available.setdefault("affiliate", []).append(str(f))
-        elif name.startswith("display"):
-            available.setdefault("display", []).append(str(f))
+        for prefix, channel in FILE_PREFIX_MAP.items():
+            if name.startswith(prefix):
+                available.setdefault(channel, []).append(str(f))
+                break
 
     return available
 
@@ -331,36 +463,48 @@ def filter_channels_by_data(requested_channels: list[str], available_data: dict)
     return active, skipped
 
 
+def determine_synthesis_levels(active_channels: list[str]) -> tuple[list[str], bool]:
+    """Determine which synthesis agents to run.
+
+    Returns:
+        (group_synthesis_groups, needs_top_level_synthesis)
+    """
+    channels_per_group = {}
+    for ch in active_channels:
+        group = CHANNEL_GROUPS.get(ch)
+        if group:
+            channels_per_group.setdefault(group, []).append(ch)
+
+    # Group synthesis: run for any group with 2+ active channels AND a synthesis agent
+    group_synthesis = []
+    for group, channels in channels_per_group.items():
+        if len(channels) >= 2 and GROUP_SYNTHESIS_MAP.get(group):
+            group_synthesis.append(group)
+
+    # Top-level synthesis: run if 2+ groups are active
+    active_groups = set(channels_per_group.keys())
+    needs_top_synthesis = len(active_groups) >= 2
+
+    return group_synthesis, needs_top_synthesis
+
+
 def build_agent_context(channel: str, classification: dict) -> dict:
     """Build the context payload for a channel sub-agent.
 
     Returns a dict with only the relevant prompt, config, memory, and data
-    for this specific channel — not the full 36KB payload.
+    for this specific channel — not the full payload.
     """
-    channel_agent_map = {
-        "sem": "agents/paid/sem.md",
-        "display": "agents/paid/display.md",
-        "affiliate": "agents/paid/affiliate.md",
-        "seo": "agents/seo/content-seo.md",
-    }
-
-    channel_baseline_map = {
-        "sem": "memory/baselines/sem-weekly-baselines.md",
-        "display": "memory/baselines/display-weekly-baselines.md",
-        "affiliate": "memory/baselines/affiliate-monthly-baselines.md",
-        "seo": "memory/baselines/seo-weekly-baselines.md",
-    }
-
     context = {
         "channel": channel,
-        "agent_prompt": channel_agent_map.get(channel),
+        "channel_group": CHANNEL_GROUPS.get(channel),
+        "agent_prompt": CHANNEL_AGENT_MAP.get(channel),
         "config": {
             "metrics": str(CONFIG_DIR / "metrics.yaml"),
             "thresholds": str(CONFIG_DIR / "thresholds.yaml"),
             "benchmarks": str(CONFIG_DIR / "benchmarks.yaml"),
         },
         "memory": {
-            "baselines": str(PROJECT_ROOT / channel_baseline_map.get(channel, "")),
+            "baselines": str(PROJECT_ROOT / CHANNEL_BASELINE_MAP.get(channel, "")),
             "known_issues": str(MEMORY_DIR / "known-issues.md"),
             "context": str(MEMORY_DIR / "context.md"),
         },
@@ -384,6 +528,9 @@ Read your agent prompt file and follow its analysis process exactly.
 ## Agent Prompt
 Read: {context['agent_prompt']}
 
+## Channel Group
+This channel belongs to the **{context.get('channel_group', 'unknown')}** group.
+
 ## Reference Files (read these before analysis)
 - Metrics definitions: {context['config']['metrics']}
 - Thresholds: {context['config']['thresholds']}
@@ -405,17 +552,54 @@ Your output MUST be valid JSON conforming to the schema at {context['output_sche
 
 Read the schema file, then produce a JSON output with these fields:
 - channel: "{channel}"
+- channel_group: "{context.get('channel_group')}"
 - geo: your geo filter
 - period: "YYYY-MM-DD/YYYY-MM-DD"
 - comparison_type: "{context['comparison_type']}"
 - summary: array of metric objects (metric, current, prior, delta_pct, benchmark, status)
 - top_movers: array of top 5 movers (rank, segment, metric, change_pct, likely_cause)
 - anomalies: array of detected anomalies (metric, segment, z_score, direction, value, baseline)
-- budget_pacing: object with mtd_spend, monthly_budget, linear_pace, variance_pct, projected_month_end, status (null for SEO)
+- budget_pacing: object with mtd_spend, monthly_budget, linear_pace, variance_pct, projected_month_end, status (null for non-spend channels)
 - data_quality_notes: array of warning strings
+- extended_metrics: object with channel-specific KPIs (for CRM: open_rate, click_rate, etc.)
 
 Read the data files, perform your analysis, and return ONLY the JSON output.
 Write the JSON output to: {str(DATA_PIPELINE / f'{channel}_output.json')}
+"""
+    return prompt
+
+
+def build_group_synthesis_prompt(group: str, channel_outputs: list[dict]) -> str:
+    """Build the prompt for a group synthesis sub-agent."""
+    outputs_json = json.dumps(channel_outputs, indent=2)
+    synthesis_agent = GROUP_SYNTHESIS_MAP.get(group)
+
+    prompt = f"""You are the {group.upper()} Group Synthesis Agent.
+
+## Instructions
+Read your agent prompt: {synthesis_agent}
+
+## Reference Files
+- Metrics definitions: {str(CONFIG_DIR / 'metrics.yaml')}
+- Benchmarks: {str(CONFIG_DIR / 'benchmarks.yaml')}
+- Business context: {str(MEMORY_DIR / 'context.md')}
+
+## Channel Analysis Results for {group.upper()} Group
+```json
+{outputs_json}
+```
+
+## Output Requirements
+Your output MUST be valid JSON conforming to: {str(SCHEMAS_DIR / 'group-synthesis-output.json')}
+
+Produce JSON with:
+- group: "{group}"
+- group_summary: total_spend, total_revenue, blended_roas, channels_analyzed, status, top_issue, top_opportunity
+- channel_mix: intra-group efficiency table
+- contradictions: any data conflicts within the group
+- actions: top 3 ICE-scored actions scoped to this group
+
+Write the JSON output to: {str(DATA_PIPELINE / f'{group}_group_synthesis_output.json')}
 """
     return prompt
 
@@ -455,12 +639,12 @@ Write the JSON output to: {str(DATA_PIPELINE / 'hypothesis_output.json')}
     return prompt
 
 
-def build_synthesis_prompt(channel_outputs: list[dict], hypothesis_output: dict) -> str:
-    """Build the prompt for the synthesis sub-agent."""
-    channels_json = json.dumps(channel_outputs, indent=2)
+def build_top_synthesis_prompt(group_synthesis_outputs: list[dict], hypothesis_output: dict) -> str:
+    """Build the prompt for the top-level cross-group synthesis sub-agent."""
+    groups_json = json.dumps(group_synthesis_outputs, indent=2)
     hypothesis_json = json.dumps(hypothesis_output, indent=2)
 
-    prompt = f"""You are the Cross-Channel Synthesis Agent.
+    prompt = f"""You are the Top-Level Cross-Group Synthesis Agent.
 
 ## Instructions
 Read your agent prompt: agents/cross-channel/synthesis.md
@@ -469,9 +653,9 @@ Read your agent prompt: agents/cross-channel/synthesis.md
 - Metrics definitions: {str(CONFIG_DIR / 'metrics.yaml')}
 - Business context: {str(MEMORY_DIR / 'context.md')}
 
-## Channel Analysis Results
+## Group Synthesis Results
 ```json
-{channels_json}
+{groups_json}
 ```
 
 ## Hypothesis Results
@@ -483,9 +667,11 @@ Read your agent prompt: agents/cross-channel/synthesis.md
 Your output MUST be valid JSON conforming to: {str(SCHEMAS_DIR / 'synthesis-output.json')}
 
 Produce JSON with:
-- channel_mix: efficiency table (spend share vs revenue share)
-- contradictions: any data conflicts across channels
-- actions: top 5 ICE-scored action items
+- groups: array of group summary cards
+- attribution_coverage: attributed_revenue_pct, unattributed_channels
+- channel_mix: cross-group efficiency table
+- contradictions: any cross-group data conflicts
+- actions: top 5 ICE-scored action items across all groups
 
 Write the JSON output to: {str(DATA_PIPELINE / 'synthesis_output.json')}
 """
@@ -493,7 +679,7 @@ Write the JSON output to: {str(DATA_PIPELINE / 'synthesis_output.json')}
 
 
 # ─────────────────────────────────────────────
-# STEP 5-6: VALIDATE OUTPUTS
+# OUTPUT VALIDATION
 # ─────────────────────────────────────────────
 
 def validate_channel_output(output: dict) -> list[str]:
@@ -541,7 +727,7 @@ def validate_channel_output(output: dict) -> list[str]:
 
 
 # ─────────────────────────────────────────────
-# STEP 7: MEMORY UPDATE
+# MEMORY UPDATE
 # ─────────────────────────────────────────────
 
 def update_decisions_log(actions: list[dict], analysis_source: str):
@@ -576,7 +762,7 @@ def update_decisions_log(actions: list[dict], analysis_source: str):
 def run_pipeline(query: str = "", channels: list[str] | None = None,
                  period: str | None = None, skip_preprocess: bool = False,
                  preprocess_only: bool = False, dry_run: bool = False) -> dict:
-    """Execute the full 7-step analysis pipeline.
+    """Execute the full 9-step analysis pipeline.
 
     Returns a dict with results from each step.
     """
@@ -591,26 +777,26 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
     DATA_PIPELINE.mkdir(parents=True, exist_ok=True)
 
     # ── Step 1: Classify ──
-    print("\n[1/7] CLASSIFY — Determining analysis intent...")
+    print("\n[1/9] CLASSIFY — Determining analysis intent...")
     if channels:
+        groups = list(set(CHANNEL_GROUPS.get(ch, "") for ch in channels if ch in CHANNEL_GROUPS))
         classification = {
             "channels": channels,
-            "agent_prompts": [],
-            "also_invoke": ["agents/hypothesis.md"],
+            "groups": [g for g in groups if g],
             "self_contained": False,
+            "all_channels": False,
             "match_type": "explicit",
             "template": select_template(query.lower()),
             "date_range": parse_date_range(period or ""),
             "comparison_type": parse_comparison_type(query.lower()),
             "geo": parse_geo(query.lower()),
         }
-        if len(channels) > 1:
-            classification["also_invoke"].append("agents/cross-channel/synthesis.md")
     else:
         classification = classify_query(query)
 
     pipeline_result["steps"]["classify"] = classification
     print(f"  Channels: {classification['channels'] or '(auto-detect from available data)'}")
+    print(f"  Groups: {classification.get('groups', [])}")
     print(f"  Template: {classification['template']}")
     print(f"  Comparison: {classification['comparison_type']}")
     print(f"  Geo: {classification['geo']}")
@@ -629,7 +815,7 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
 
     # ── Step 2: Preprocess ──
     if not skip_preprocess:
-        print("\n[2/7] PREPROCESS — Standardizing input files...")
+        print("\n[2/9] PREPROCESS — Standardizing input files...")
         preprocess_result = run_preprocessor(dry_run=dry_run)
         pipeline_result["steps"]["preprocess"] = preprocess_result
 
@@ -643,16 +829,16 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
             elif preprocess_result.get("status") == "error":
                 print(f"  Error: {preprocess_result.get('error', 'unknown')}")
     else:
-        print("\n[2/7] PREPROCESS — Skipped (--skip-preprocess)")
+        print("\n[2/9] PREPROCESS — Skipped (--skip-preprocess)")
         pipeline_result["steps"]["preprocess"] = {"status": "skipped"}
 
     if preprocess_only:
         pipeline_result["status"] = "preprocess_only"
-        print("\n[3-7] Skipped (--preprocess-only)")
+        print("\n[3-9] Skipped (--preprocess-only)")
         return pipeline_result
 
     # ── Step 3: Validate ──
-    print("\n[3/7] VALIDATE — Running data quality checks...")
+    print("\n[3/9] VALIDATE — Running data quality checks...")
     validation_result = run_validation()
     pipeline_result["steps"]["validate"] = validation_result
 
@@ -672,9 +858,12 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
             print(f"    - {caveat}")
 
     # ── Step 4: Dispatch ──
-    print("\n[4/7] DISPATCH — Routing to channel agents...")
+    print("\n[4/9] DISPATCH — Routing to channel agents...")
     available_data = get_available_data()
-    requested = classification["channels"] or list(available_data.keys())
+    if classification.get("all_channels"):
+        requested = list(available_data.keys())
+    else:
+        requested = classification["channels"] or list(available_data.keys())
     active_channels, skipped = filter_channels_by_data(requested, available_data)
 
     if skipped:
@@ -685,6 +874,9 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
         return pipeline_result
 
     print(f"  Active channels: {active_channels}")
+    active_groups = list(set(CHANNEL_GROUPS.get(ch, "") for ch in active_channels if ch in CHANNEL_GROUPS))
+    active_groups = [g for g in active_groups if g]
+    print(f"  Active groups: {active_groups}")
     print(f"  Mode: {'parallel' if len(active_channels) > 1 else 'sequential'}")
 
     # Build contexts and prompts for each channel
@@ -693,7 +885,6 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
         ctx = build_agent_context(ch, classification)
         channel_contexts[ch] = ctx
         prompt = build_subagent_prompt(ch, ctx)
-        # Save prompt for sub-agent invocation
         prompt_file = DATA_PIPELINE / f"{ch}_prompt.md"
         with open(prompt_file, "w") as f:
             f.write(prompt)
@@ -701,46 +892,62 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
 
     pipeline_result["steps"]["dispatch"] = {
         "active_channels": active_channels,
+        "active_groups": active_groups,
         "skipped_channels": skipped,
         "prompts_written": [f"{ch}_prompt.md" for ch in active_channels],
     }
 
-    # ── Step 5: Hypothesis prompt ──
-    print("\n[5/7] HYPOTHESIZE — Preparing hypothesis agent...")
-    # The actual sub-agent execution happens via Claude Code Task tool.
-    # This script prepares the prompts; the caller invokes sub-agents.
+    # ── Step 5: Group Synthesis ──
+    group_synthesis_groups, needs_top_synthesis = determine_synthesis_levels(active_channels)
+
+    if group_synthesis_groups:
+        print(f"\n[5/9] GROUP SYNTHESIZE — Preparing group synthesis for: {group_synthesis_groups}")
+        for group in group_synthesis_groups:
+            group_prompt = build_group_synthesis_prompt(group, [])  # Placeholder
+            grp_file = DATA_PIPELINE / f"{group}_group_synthesis_prompt.md"
+            with open(grp_file, "w") as f:
+                f.write(group_prompt)
+            print(f"  Wrote group synthesis prompt: {grp_file.name}")
+        pipeline_result["steps"]["group_synthesis"] = {
+            "groups": group_synthesis_groups,
+            "prompts_written": [f"{g}_group_synthesis_prompt.md" for g in group_synthesis_groups],
+        }
+    else:
+        print(f"\n[5/9] GROUP SYNTHESIZE — Skipped (no group has 2+ active channels)")
+        pipeline_result["steps"]["group_synthesis"] = {"status": "skipped"}
+
+    # ── Step 6: Hypothesis prompt ──
+    print("\n[6/9] HYPOTHESIZE — Preparing hypothesis agent...")
     hypothesis_prompt = build_hypothesis_prompt([])  # Placeholder; real data comes from step 4 outputs
     hyp_file = DATA_PIPELINE / "hypothesis_prompt.md"
     with open(hyp_file, "w") as f:
         f.write(hypothesis_prompt)
     print(f"  Wrote hypothesis prompt: {hyp_file.name}")
-
     pipeline_result["steps"]["hypothesis"] = {"prompt_written": str(hyp_file)}
 
-    # ── Step 6: Synthesis prompt (conditional) ──
-    needs_synthesis = len(active_channels) >= 2
-    if needs_synthesis:
-        print("\n[6/7] SYNTHESIZE — Preparing synthesis agent (multi-channel)...")
-        synthesis_prompt = build_synthesis_prompt([], {})  # Placeholder
-        syn_file = DATA_PIPELINE / "synthesis_prompt.md"
+    # ── Step 7: Top-level synthesis prompt (conditional) ──
+    if needs_top_synthesis:
+        print(f"\n[7/9] TOP SYNTHESIZE — Preparing top-level synthesis (multi-group)...")
+        top_synthesis_prompt = build_top_synthesis_prompt([], {})  # Placeholder
+        syn_file = DATA_PIPELINE / "top_synthesis_prompt.md"
         with open(syn_file, "w") as f:
-            f.write(synthesis_prompt)
-        print(f"  Wrote synthesis prompt: {syn_file.name}")
-        pipeline_result["steps"]["synthesis"] = {"prompt_written": str(syn_file)}
+            f.write(top_synthesis_prompt)
+        print(f"  Wrote top synthesis prompt: {syn_file.name}")
+        pipeline_result["steps"]["top_synthesis"] = {"prompt_written": str(syn_file)}
     else:
-        print("\n[6/7] SYNTHESIZE — Skipped (single channel)")
-        pipeline_result["steps"]["synthesis"] = {"status": "skipped", "reason": "single_channel"}
+        print(f"\n[7/9] TOP SYNTHESIZE — Skipped ({'single group' if len(active_groups) <= 1 else 'single channel'})")
+        pipeline_result["steps"]["top_synthesis"] = {"status": "skipped", "reason": "single_group"}
 
-    # ── Step 7: Template + Summary ──
-    print("\n[7/7] FORMAT — Template selection and pipeline summary...")
+    # ── Step 8: Template ──
+    print("\n[8/9] FORMAT — Template selection...")
     template = classification["template"]
-
-    # Refine template based on z-scores once data is available
     pipeline_result["steps"]["format"] = {
         "template": template,
         "output_dir": str(DATA_PIPELINE),
     }
 
+    # ── Step 9: Summary ──
+    print("\n[9/9] MEMORY — Pipeline summary...")
     pipeline_result["status"] = "ready"
     pipeline_result["completed_at"] = datetime.now().isoformat()
 
@@ -759,12 +966,16 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
         print(f"\nNext steps:")
         print(f"  1. Invoke channel sub-agents (can run in parallel):")
         for ch in active_channels:
-            print(f"     - Read {DATA_PIPELINE / f'{ch}_prompt.md'} and execute")
+            print(f"     - {ch}: read {DATA_PIPELINE / f'{ch}_prompt.md'} and execute")
         print(f"  2. Collect outputs from {DATA_PIPELINE}/*_output.json")
-        print(f"  3. Invoke hypothesis sub-agent with channel outputs")
-        if needs_synthesis:
-            print(f"  4. Invoke synthesis sub-agent with all outputs")
-        print(f"  5. Format final report using {template}")
+        if group_synthesis_groups:
+            print(f"  3. Invoke group synthesis agents (parallel across groups):")
+            for g in group_synthesis_groups:
+                print(f"     - {g}: read {DATA_PIPELINE / f'{g}_group_synthesis_prompt.md'}")
+        print(f"  4. Invoke hypothesis sub-agent with all outputs")
+        if needs_top_synthesis:
+            print(f"  5. Invoke top-level synthesis with group outputs")
+        print(f"  6. Format final report using {template}")
 
     return pipeline_result
 
@@ -776,14 +987,16 @@ def main():
         epilog="""
 Examples:
   python run_analysis.py "How did SEM perform last week?"
+  python run_analysis.py "How is email performing?"
   python run_analysis.py "Compare all channels WoW"
-  python run_analysis.py --channels sem,display
+  python run_analysis.py --channels sem,display,email
   python run_analysis.py --preprocess-only
   python run_analysis.py --skip-preprocess "SEM weekly review"
         """,
     )
     parser.add_argument("query", nargs="?", default="", help="Natural language analysis query")
-    parser.add_argument("--channels", type=str, help="Comma-separated channel list (sem,display,affiliate,seo)")
+    parser.add_argument("--channels", type=str,
+                        help="Comma-separated channel list (e.g., sem,display,email,seo)")
     parser.add_argument("--period", type=str, help="Date range: YYYY-MM-DD/YYYY-MM-DD")
     parser.add_argument("--skip-preprocess", action="store_true", help="Skip preprocessing step")
     parser.add_argument("--preprocess-only", action="store_true", help="Only run preprocessing and validation")

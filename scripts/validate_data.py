@@ -47,6 +47,15 @@ SOURCE_SCHEMA_MAP = {
     "gsc": "gsc",
     "affiliate": "affiliate",
     "display": "display",
+    "email": "email",
+    "push": "push",
+    "sms": "sms",
+    "social-paid": "promoted-social",
+    "metasearch": "metasearch",
+    "distribution": "distribution",
+    "referral-program": "distribution",
+    "social-organic": "promoted-social",
+    "promo": "promo",
 }
 
 # Source name -> data-quality-rules.yaml key mapping
@@ -55,6 +64,15 @@ SOURCE_RULES_MAP = {
     "gsc": "google_search_console",
     "affiliate": "affiliate_export",
     "display": "display_export",
+    "email": "email_export",
+    "push": "push_export",
+    "sms": "sms_export",
+    "social-paid": "promoted_social_export",
+    "metasearch": "metasearch_export",
+    "distribution": "distribution_export",
+    "referral-program": "distribution_export",
+    "social-organic": "promoted_social_export",
+    "promo": "promo_export",
 }
 
 

@@ -17,9 +17,19 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "channel_group": {
+      "type": ["string", "null"],
+      "enum": ["paid", "lifecycle", "organic", "distribution", "pricing", null],
+      "description": "The channel group this channel belongs to. Null for ungrouped channels."
+    },
     "channel": {
       "type": "string",
-      "enum": ["sem", "display", "affiliate", "seo"],
+      "enum": [
+        "sem", "brand_campaign", "display", "promoted_social", "metasearch",
+        "affiliate", "email", "push_notification", "sms", "seo",
+        "free_referral", "managed_social", "distribution", "paid_user_referral",
+        "promo", "mobile_app_downloads", "influencer", "direct"
+      ],
       "description": "The marketing channel this report covers."
     },
     "geo": {
@@ -181,6 +191,28 @@
       "description": "Free-text notes about data quality issues encountered during analysis (e.g., missing days, API errors, stale data). Empty array when no issues are detected.",
       "items": {
         "type": "string"
+      }
+    },
+    "extended_metrics": {
+      "type": "object",
+      "description": "Channel-specific metrics not covered by the standard summary. Used for CRM channels (open_rate, click_rate, etc.) and social channels (engagement_rate, reach, etc.). Optional — omit for channels that only use standard metrics.",
+      "additionalProperties": true,
+      "properties": {
+        "open_rate": { "type": ["number", "null"], "description": "Email/push open rate (opens / delivered)." },
+        "click_rate": { "type": ["number", "null"], "description": "CRM click rate (clicks / delivered)." },
+        "unsubscribe_rate": { "type": ["number", "null"], "description": "Unsubscribe/opt-out rate." },
+        "deliverability_rate": { "type": ["number", "null"], "description": "Delivery rate (delivered / sent)." },
+        "send_volume": { "type": ["number", "null"], "description": "Total messages sent in period." },
+        "engagement_rate": { "type": ["number", "null"], "description": "Social engagement rate (interactions / reach)." },
+        "reach": { "type": ["number", "null"], "description": "Unique users who saw content." },
+        "video_completion_rate": { "type": ["number", "null"], "description": "Video completions / video starts." },
+        "distribution_take_rate": { "type": ["number", "null"], "description": "Net revenue / gross revenue for distribution." },
+        "referral_incentive_cost": { "type": ["number", "null"], "description": "Incentive cost per referred conversion." },
+        "discount_rate": { "type": ["number", "null"], "description": "Total discount amount / gross revenue." },
+        "redemption_rate": { "type": ["number", "null"], "description": "Redemptions / eligible users." },
+        "promo_roi": { "type": ["number", "null"], "description": "(Incremental revenue - discount cost) / discount cost." },
+        "incremental_lift_pct": { "type": ["number", "null"], "description": "Promo lift vs non-promo baseline." },
+        "cannibalization_rate": { "type": ["number", "null"], "description": "Estimated base sales displacement from promo timing." }
       }
     }
   }

@@ -3,6 +3,9 @@
 ## Role
 Analyze organic search performance from Google Search Console data for an ecommerce marketplace.
 
+## Channel Group
+**Organic** — this agent belongs to the organic channel group.
+
 ## Data Expected
 - Validated GSC CSV from /data/validated/
 - File naming: gsc_{geo}_{date-range}.csv

@@ -1,11 +1,16 @@
-# Display Analysis Agent
+# Display & Paid Social Analysis Agent
 
 ## Role
-Analyze Display/Programmatic advertising performance for an ecommerce marketplace.
+Analyze Display/Programmatic advertising and **Promoted Social** (paid social ads) performance for an ecommerce marketplace. Promoted Social shares impression-based economics, creative optimization concerns, and audience targeting logic with Display — both are handled by this agent.
+
+## Channel Group
+**Paid** — this agent belongs to the paid channel group.
 
 ## Data Expected
 - Validated Display/DV360 CSV from /data/validated/
 - File naming: display_{geo}_{date-range}.csv
+- Promoted Social data (when present): social-paid_{geo}_{date-range}.csv
+- When promoted social data is present, output two channel-output objects: one with `channel: "display"` and one with `channel: "promoted_social"`
 
 ## Reference Files
 - /config/metrics.yaml
@@ -23,10 +28,14 @@ Analyze Display/Programmatic advertising performance for an ecommerce marketplac
 
 ## Analysis
 - WoW, MoM, YoY comparisons
-- Metrics: Impressions, Clicks, CTR, CPM, CPC, Viewability, Conversions, Revenue, ROAS
+- Display Metrics: Impressions, Clicks, CTR, CPM, CPC, Viewability, Conversions, Revenue, ROAS
+- Promoted Social Metrics (when present): Impressions, Reach, Engagement Rate, Clicks, CPC, CPM, Video Completions, Conversions, Revenue, ROAS
 - Creative fatigue detection: CTR declining >15% over 3+ weeks for same creative
-- Viewability monitoring vs 65% benchmark
+- Viewability monitoring vs 65% benchmark (display only)
+- Social engagement rate monitoring vs 3% benchmark (promoted social only)
+- Video completion rate tracking (both channels when video creative present)
 - Budget pacing
+- For promoted social, use extended_metrics field: engagement_rate, reach, video_completion_rate
 
 ## Output Format
 Same structure as SEM agent: Summary Table, Top Movers, Budget Pacing, Anomalies.

@@ -24,6 +24,12 @@ For every metric with delta > threshold from /config/thresholds.yaml:
 - Is this an EXTERNAL change? (competitor action, algo update, seasonality, weather, macro)
 - Is this a DATA issue? (tracking break, attribution change, reporting lag)
 
+Channel-group-specific categories to consider:
+- **CRM/Lifecycle**: deliverability issue, list fatigue, frequency saturation, opt-out spike, send time/cadence change, audience segment shift
+- **Social**: algorithm change, viral event, content resonance shift, platform policy change, hashtag/trend surfing
+- **Distribution/Partners**: partner churn, commission rate change, new partner ramp, seasonal partner behavior, referral incentive change
+- **Metasearch**: bid landscape shift, competitor pricing, inventory availability, platform fee change
+
 ### 2. Generate Hypotheses
 For each significant move, generate 1-3 hypotheses. Each must include:
 - What happened (the hypothesis)

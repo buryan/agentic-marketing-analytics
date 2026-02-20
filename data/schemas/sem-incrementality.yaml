@@ -1,0 +1,33 @@
+name: SEM Incrementality Test Data
+
+performance_data:
+  description: Daily campaign metrics in unpivoted format (one row per metric per campaign per day)
+  columns:
+    Region: { type: string, values: [NA, INTL], required: true }
+    Program: { type: string, values: [Geocat, PLA Paid, RTC, DSA], required: true }
+    Campaign: { type: string, required: true }
+    Date: { type: date, format: MM/DD/YYYY, required: true }
+    Metric: { type: string, values: [Costs, M1 Vfm, Orders, Clicks, Impressions, Activations, Reactivations, ROI, CVR, CTR, CPC, AOV], required: true }
+    Arm: { type: string, values: [Control, Treatment], required: true }
+    After learning period: { type: string, values: [YES, NO], required: true }
+    Campaign original: { type: string, required: true, description: "Pairing key — both arms share this value" }
+    Value: { type: float, required: true }
+  segmentation:
+    region: "Region column (NA or INTL)"
+    program: "Program column (Geocat, PLA Paid, RTC, DSA)"
+    arm: "Arm column (Control or Treatment)"
+    learning_period: "After learning period column (YES or NO)"
+    campaign_pair: "Campaign original column"
+
+change_events_data:
+  description: tROAS target changes and budget changes per campaign over time
+  columns:
+    campaign_name: { type: string, required: true, description: "Matches Campaign in performance data" }
+    change_date: { type: date, required: true }
+    change_date_time: { type: datetime, required: false }
+    old_roas_value: { type: float, required: false, description: "Null if budget change" }
+    new_roas_value: { type: float, required: false, description: "Null if budget change" }
+    old_budget_amount: { type: float, required: false, description: "Null if tROAS change" }
+    new_budget_amount: { type: float, required: false, description: "Null if tROAS change" }
+    campaign_id: { type: string, required: true }
+    account_name: { type: string, required: false }

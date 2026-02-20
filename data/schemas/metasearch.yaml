@@ -1,0 +1,12 @@
+name: Metasearch Export
+columns:
+  Date: { type: date, format: YYYY-MM-DD, required: true }
+  Campaign: { type: string, required: true }
+  Impressions: { type: integer, min: 0, required: true }
+  Clicks: { type: integer, min: 0, required: true }
+  Cost: { type: float, min: 0, required: true, unit: USD }
+  Bookings: { type: integer, min: 0, required: false }
+  Revenue: { type: float, min: 0, required: false, unit: USD }
+  Platform: { type: string, required: false }
+  Property: { type: string, required: false }
+  Avg Bid: { type: float, min: 0, required: false, unit: USD }

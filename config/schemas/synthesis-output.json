@@ -1,12 +1,50 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "synthesis-output.json",
-  "title": "Synthesis Agent Output",
-  "description": "Structured output from the cross-channel synthesis agent. Combines channel-level data into a unified view with channel mix analysis, contradiction detection, and prioritized action recommendations.",
+  "title": "Top-Level Synthesis Agent Output",
+  "description": "Structured output from the top-level cross-group synthesis agent. Combines group-level synthesis outputs into a portfolio view with cross-group budget allocation, attribution analysis, and prioritized actions.",
   "type": "object",
-  "required": ["channel_mix", "contradictions", "actions"],
+  "required": ["groups", "channel_mix", "contradictions", "actions", "attribution_coverage"],
   "additionalProperties": false,
   "properties": {
+    "groups": {
+      "type": "array",
+      "description": "Group-level summary cards from group synthesis agents. One entry per active channel group.",
+      "items": {
+        "type": "object",
+        "required": ["group", "total_spend", "total_revenue", "channels_analyzed", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "group": { "type": "string", "description": "Channel group ID." },
+          "total_spend": { "type": ["number", "null"] },
+          "total_revenue": { "type": ["number", "null"] },
+          "blended_roas": { "type": ["number", "null"] },
+          "channels_analyzed": { "type": "array", "items": { "type": "string" } },
+          "top_issue": { "type": ["string", "null"] },
+          "top_opportunity": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["GREEN", "YELLOW", "RED"] }
+        }
+      }
+    },
+    "attribution_coverage": {
+      "type": "object",
+      "description": "What percentage of total revenue/traffic is attributed to known channels vs unattributed (direct, unknown).",
+      "required": ["attributed_revenue_pct"],
+      "additionalProperties": false,
+      "properties": {
+        "attributed_revenue_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage of total revenue attributed to known marketing channels."
+        },
+        "unattributed_channels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of unattributed channel names (e.g., direct, unknown)."
+        }
+      }
+    },
     "channel_mix": {
       "type": "array",
       "description": "Channel mix breakdown showing spend allocation, revenue attribution, ROAS, and efficiency for each channel.",
