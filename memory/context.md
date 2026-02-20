@@ -1,15 +1,14 @@
 # Business Context
 
-## Budget Allocations (update quarterly)
-- SEM: [fill with current monthly budget]
-- Display: [fill with current monthly budget]
-- Affiliate: [fill with current monthly budget]
-- Total Paid: [fill with total]
+## Budget Allocations
+Update this section quarterly with actual monthly budgets. Used by channel agents for pacing calculations.
+When populated, format as: `- SEM: $X/month`
 
-## Promo Calendar (update monthly)
+## Promo Calendar
+Update this section monthly. Used by hypothesis agent to explain metric movements.
+When populated, format as:
 | Date Range | Promo | Channels | Expected Impact |
 |-----------|-------|----------|-----------------|
-| [fill] | [fill] | [fill] | [fill] |
 
 ## Seasonality Patterns
 - Q4 (Oct-Dec): peak season, highest volume

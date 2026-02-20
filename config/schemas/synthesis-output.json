@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "synthesis-output.json",
+  "title": "Synthesis Agent Output",
+  "description": "Structured output from the cross-channel synthesis agent. Combines channel-level data into a unified view with channel mix analysis, contradiction detection, and prioritized action recommendations.",
+  "type": "object",
+  "required": ["channel_mix", "contradictions", "actions"],
+  "additionalProperties": false,
+  "properties": {
+    "channel_mix": {
+      "type": "array",
+      "description": "Channel mix breakdown showing spend allocation, revenue attribution, ROAS, and efficiency for each channel.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["channel", "spend", "spend_share", "revenue", "revenue_share", "roas", "efficiency"],
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Marketing channel name."
+          },
+          "spend": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Total spend for this channel in the analysis period."
+          },
+          "spend_share": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "This channel's share of total spend (0.0 - 1.0)."
+          },
+          "revenue": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Total attributed revenue for this channel in the analysis period."
+          },
+          "revenue_share": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "This channel's share of total revenue (0.0 - 1.0)."
+          },
+          "roas": {
+            "type": "number",
+            "description": "Return on ad spend (revenue / spend). May be 0 if spend is 0."
+          },
+          "efficiency": {
+            "type": "number",
+            "description": "Efficiency score relative to target ROAS or historical baseline. Values > 1.0 indicate above-target performance."
+          }
+        }
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "description": "Cross-channel contradictions or inconsistencies detected in the data that require investigation. Empty array when no contradictions are found.",
+      "items": {
+        "type": "object",
+        "required": ["type", "description", "values", "resolution"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Category of contradiction (e.g., 'attribution_overlap', 'revenue_mismatch', 'trend_divergence', 'pacing_conflict')."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the contradiction."
+          },
+          "values": {
+            "type": "object",
+            "description": "Key-value pairs of the conflicting data points for inspection.",
+            "additionalProperties": true
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Recommended approach to resolve or explain the contradiction."
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "Prioritized action recommendations scored using the ICE framework (Impact, Confidence, Ease). Sorted by ice_score descending.",
+      "items": {
+        "type": "object",
+        "required": ["action", "impact", "confidence", "ease", "ice_score", "channel", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Clear, specific action recommendation."
+          },
+          "impact": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Expected impact of the action on business outcomes (1 = minimal, 5 = transformative)."
+          },
+          "confidence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Confidence that the action will produce the expected impact (1 = speculative, 5 = near-certain)."
+          },
+          "ease": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Ease of implementation (1 = major effort, 5 = trivial to execute)."
+          },
+          "ice_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 125,
+            "description": "Composite ICE score (impact * confidence * ease). Used for prioritization."
+          },
+          "channel": {
+            "type": "string",
+            "description": "The channel this action applies to, or 'cross-channel' for portfolio-level actions."
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Brief explanation of why this action is recommended and what evidence supports it."
+          }
+        }
+      }
+    }
+  }
+}

@@ -4,18 +4,30 @@
 Agentic system for automated marketing analytics across Paid (SEM, Display, Affiliate) and SEO channels for an ecommerce marketplace. All analysis runs on imported data only (CSV, screenshots, exports). No API connections. All agents are .md prompt files. Claude reasons directly over data.
 
 ## Architecture
-Multi-agent hierarchy. Each agent is a .md file with a defined role, expected inputs, reference files, and output format.
+Hybrid Python + LLM agent system. The Python orchestrator (`run_analysis.py`) enforces the processing chain, manages context isolation, and enables parallel execution. LLM agents handle reasoning-heavy tasks (analysis, hypothesis, synthesis). Deterministic Python scripts handle mechanical tasks (preprocessing, data quality validation).
+
+### Key Components
+- **run_analysis.py** — Master orchestrator enforcing the 7-step chain
+- **scripts/preprocess.py** — Deterministic file standardization (replaces LLM preprocessing)
+- **scripts/validate_data.py** — Deterministic data quality validation with gate logic
+- **agents/*.md** — LLM agent prompts for reasoning-heavy analysis
+- **config/schemas/*.json** — Structured output contracts (channel-output, hypothesis-output, synthesis-output)
+- **data/pipeline/** — Inter-agent communication via JSON files
+
+### Standalone Pipelines (independent of agent chain)
+- **run_display_halo.py** → Display Halo Effect analysis (Python + HTML)
+- **run_sem_incrementality.py** → SEM Incrementality test analysis (Python + HTML)
 
 ## Processing Chain (mandatory order)
-Every analysis request follows this exact sequence. Never skip steps.
+Every analysis request follows this exact sequence. Enforced by `run_analysis.py`. Never skip steps.
 
-1. PREPROCESSOR (agents/preprocessor.md) - standardize file names, columns, dates, split combined files
-2. DATA QUALITY (agents/data-quality.md) - validate schema, completeness, sanity, cross-source consistency
-3. ORCHESTRATOR (agents/orchestrator.md) - classify query, select agent(s), set date range
-4. CHANNEL AGENT(S) - analyze validated data with baselines and benchmarks
-5. HYPOTHESIS AGENT (agents/hypothesis.md) - explain WHY metrics moved, assign confidence
-6. SYNTHESIS AGENT (agents/cross-channel/synthesis.md) - only if multi-channel, cross-channel view + contradictions + ICE-scored actions
-7. MEMORY UPDATE - append new baselines, log decisions, update known issues
+1. PREPROCESS (`scripts/preprocess.py`) — deterministic: standardize file names, columns, dates, split combined files
+2. DATA QUALITY (`scripts/validate_data.py`) — deterministic: validate schema, completeness, sanity. Gate: FAIL = block, WARN = proceed with caveats
+3. ORCHESTRATOR (`run_analysis.py` + `agents/orchestrator.md`) — classify query, select agent(s), set date range
+4. CHANNEL AGENT(S) — **parallel** execution via sub-agents, each with isolated context (~8KB vs ~36KB). Output: structured JSON per /config/schemas/channel-output.json
+5. HYPOTHESIS AGENT (`agents/hypothesis.md`) — sequential, explain WHY metrics moved, assign confidence
+6. SYNTHESIS AGENT (`agents/cross-channel/synthesis.md`) — conditional (2+ channels), cross-channel view + contradictions + ICE-scored actions
+7. MEMORY UPDATE — append new baselines, log decisions to decisions-log.md, update known issues
 
 ## Data Rules
 - All inputs go to /data/input/
@@ -27,11 +39,15 @@ Every analysis request follows this exact sequence. Never skip steps.
 - Every numeric claim must trace to a source file. No hallucinated numbers.
 
 ## Agent Invocation Rules
-- When new files appear in /data/input/, ALWAYS run preprocessor then data-quality first
-- Orchestrator determines which channel agent(s) to invoke based on query keywords
-- Hypothesis agent runs after every channel agent
+- When new files appear in /data/input/, ALWAYS run `python scripts/preprocess.py` then `python scripts/validate_data.py`
+- Or use `python run_analysis.py` which handles the full pipeline automatically
+- Orchestrator determines which channel agent(s) to invoke based on query keywords (with LLM fallback for unmatched queries)
+- Channel agents run as parallel sub-agents, each receiving only their own prompt + relevant config (context isolation)
+- Each channel agent must output structured JSON conforming to /config/schemas/channel-output.json
+- Hypothesis agent runs sequentially after all channel agents complete
 - Synthesis agent runs only when 2+ channel agents are invoked
 - After every analysis run, update relevant memory files
+- ICE-scored actions auto-logged to /memory/decisions-log.md
 
 ## Output Standards
 - Tables preferred over paragraphs
@@ -43,15 +59,18 @@ Every analysis request follows this exact sequence. Never skip steps.
 
 ## Extension Protocol
 To add a new channel or data source:
-1. Create /data/schemas/{source}.yaml
+1. Create /data/schemas/{source}.yaml (data schema)
 2. Add validation rules to /config/data-quality-rules.yaml
-3. Add metric definitions to /config/metrics.yaml if new metrics needed
-4. Add benchmarks to /config/benchmarks.yaml if available
-5. Create /agents/{category}/{agent}.md
-6. Update /agents/orchestrator.md routing table
-7. Create /memory/baselines/{channel}.md
-8. Test with real data end-to-end
-9. Log change in /prompts/changelog.md
+3. Add source signature to scripts/preprocess.py SOURCE_SIGNATURES
+4. Add source rules to scripts/validate_data.py SOURCE_RULES_MAP
+5. Add metric definitions to /config/metrics.yaml if new metrics needed
+6. Add benchmarks to /config/benchmarks.yaml if available
+7. Create /agents/{category}/{agent}.md (output must conform to /config/schemas/channel-output.json)
+8. Update /agents/orchestrator.md routing table
+9. Add routing entry to run_analysis.py ROUTING_TABLE
+10. Create /memory/baselines/{channel}.md
+11. Test with real data end-to-end: `python run_analysis.py --channels {channel}`
+12. Log change in /prompts/changelog.md
 
 ## Memory Update Protocol
 After each analysis run:

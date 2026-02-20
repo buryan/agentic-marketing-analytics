@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "channel-output.json",
+  "title": "Channel Agent Output",
+  "description": "Structured output contract that every channel agent (SEM, Display, Affiliate, SEO) must conform to. The orchestrator validates agent outputs against this schema before passing to the hypothesis agent.",
+  "type": "object",
+  "required": [
+    "channel",
+    "geo",
+    "period",
+    "comparison_type",
+    "summary",
+    "top_movers",
+    "anomalies",
+    "budget_pacing",
+    "data_quality_notes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "type": "string",
+      "enum": ["sem", "display", "affiliate", "seo"],
+      "description": "The marketing channel this report covers."
+    },
+    "geo": {
+      "type": "string",
+      "enum": ["NA", "INTL", "ALL"],
+      "description": "Geographic scope of the analysis: North America, International, or All regions."
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}/\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date range of the analysis in YYYY-MM-DD/YYYY-MM-DD format.",
+      "examples": ["2026-02-10/2026-02-16"]
+    },
+    "comparison_type": {
+      "type": "string",
+      "enum": ["wow", "mom", "yoy"],
+      "description": "The comparison basis: week-over-week, month-over-month, or year-over-year."
+    },
+    "summary": {
+      "type": "array",
+      "description": "Top-level KPI summary rows. Each entry represents one metric with its current value, prior value, percent change, benchmark, and traffic-light status.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["metric", "current", "delta_pct", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "type": "string",
+            "description": "Name of the KPI (e.g., spend, clicks, impressions, conversions, revenue, ROAS, CPA, CTR)."
+          },
+          "current": {
+            "type": "number",
+            "description": "Metric value for the current period."
+          },
+          "prior": {
+            "type": ["number", "null"],
+            "description": "Metric value for the prior comparison period. Null when no prior data is available."
+          },
+          "delta_pct": {
+            "type": ["number", "null"],
+            "description": "Percentage change from prior to current period. Null when prior is unavailable."
+          },
+          "benchmark": {
+            "type": ["number", "null"],
+            "description": "Expected or benchmark value for this metric from baselines. Null if no benchmark is configured."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["GREEN", "YELLOW", "RED"],
+            "description": "Traffic-light status based on threshold rules: GREEN = within tolerance, YELLOW = warning, RED = alert."
+          }
+        }
+      }
+    },
+    "top_movers": {
+      "type": "array",
+      "description": "Segments (campaigns, ad groups, keywords, pages) with the largest absolute or relative changes. Ordered by rank.",
+      "items": {
+        "type": "object",
+        "required": ["rank", "segment", "metric", "change_pct"],
+        "additionalProperties": false,
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Ordinal rank of this mover (1 = largest change)."
+          },
+          "segment": {
+            "type": "string",
+            "description": "Identifier for the segment that moved (e.g., campaign name, keyword, landing page)."
+          },
+          "metric": {
+            "type": "string",
+            "description": "The metric that experienced the change."
+          },
+          "change_pct": {
+            "type": "number",
+            "description": "Percentage change for this segment-metric pair."
+          },
+          "likely_cause": {
+            "type": ["string", "null"],
+            "description": "Optional preliminary explanation for the move. Null when no cause can be inferred at the channel level."
+          }
+        }
+      }
+    },
+    "anomalies": {
+      "type": "array",
+      "description": "Statistical anomalies detected via z-score or similar methods. Empty array when no anomalies are found.",
+      "items": {
+        "type": "object",
+        "required": ["metric", "segment", "z_score", "direction", "value", "baseline"],
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "type": "string",
+            "description": "The metric where the anomaly was detected."
+          },
+          "segment": {
+            "type": "string",
+            "description": "The segment exhibiting the anomaly."
+          },
+          "z_score": {
+            "type": "number",
+            "description": "Z-score of the observed value relative to its historical distribution."
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["up", "down"],
+            "description": "Whether the anomaly is an upward or downward deviation."
+          },
+          "value": {
+            "type": "number",
+            "description": "The observed anomalous value."
+          },
+          "baseline": {
+            "type": "number",
+            "description": "The expected baseline value (mean of the historical distribution)."
+          }
+        }
+      }
+    },
+    "budget_pacing": {
+      "type": "object",
+      "description": "Month-to-date budget pacing snapshot. All fields may be null for channels without budget tracking (e.g., SEO).",
+      "required": ["mtd_spend", "monthly_budget", "linear_pace", "variance_pct", "projected_month_end", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "mtd_spend": {
+          "type": ["number", "null"],
+          "description": "Actual spend from the first of the month through the end of the analysis period."
+        },
+        "monthly_budget": {
+          "type": ["number", "null"],
+          "description": "Total planned budget for the month."
+        },
+        "linear_pace": {
+          "type": ["number", "null"],
+          "description": "Expected spend at this point in the month assuming linear daily distribution (0.0 - 1.0)."
+        },
+        "variance_pct": {
+          "type": ["number", "null"],
+          "description": "Percentage variance of actual spend vs. linear pace. Positive = overpacing, negative = underpacing."
+        },
+        "projected_month_end": {
+          "type": ["number", "null"],
+          "description": "Projected total spend by month-end based on current run rate."
+        },
+        "status": {
+          "type": ["string", "null"],
+          "enum": ["GREEN", "YELLOW", "RED", null],
+          "description": "Pacing status: GREEN = within tolerance, YELLOW = slight over/underpace, RED = significant deviation. Null for channels without budgets."
+        }
+      }
+    },
+    "data_quality_notes": {
+      "type": "array",
+      "description": "Free-text notes about data quality issues encountered during analysis (e.g., missing days, API errors, stale data). Empty array when no issues are detected.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

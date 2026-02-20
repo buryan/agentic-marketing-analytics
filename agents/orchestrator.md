@@ -18,9 +18,11 @@ Every user query.
 
 ### 1. Check for New Files
 - Scan /data/input/ for any files not yet processed
-- If new files found: run preprocessor.md first, then data-quality.md
-- If data quality returns FAIL: stop, report failures, do not proceed to analysis
-- If data quality returns WARN: note caveats, proceed
+- If new files found: run `python scripts/preprocess.py` (deterministic Python preprocessing)
+- Then run `python scripts/validate_data.py` (deterministic data quality validation)
+- If data quality returns FAIL (gate_decision: BLOCK): stop, report failures, do not proceed to analysis
+- If data quality returns WARN (gate_decision: PROCEED_WITH_CAVEATS): note caveats, proceed
+- Alternatively, run `python run_analysis.py` which orchestrates the full pipeline
 
 ### 2. Classify Query Intent
 Parse the user query and match to routing table:
@@ -31,11 +33,13 @@ Parse the user query and match to routing table:
 | Display, programmatic, DV360, CPM, banner, viewability | agents/paid/display.md | hypothesis.md |
 | Affiliate, publisher, commission, EPC, partner | agents/paid/affiliate.md | hypothesis.md |
 | SEO, organic, rankings, GSC, search console, position | agents/seo/content-seo.md | hypothesis.md |
-| Crawl, indexing, page speed, Core Web Vitals, technical SEO | agents/seo/technical-seo.md | hypothesis.md |
+| Crawl, indexing, page speed, Core Web Vitals, technical SEO | agents/seo/content-seo.md | hypothesis.md |
 | Overall, all channels, mix, compare channels, total, blended | All agents with available data | synthesis.md |
 | Paid, paid channels, paid media | sem.md + display.md + affiliate.md | synthesis.md |
 | Budget, pacing, spend | Relevant channel agent(s) | none |
 | Anomaly, alert, flag, unusual | Relevant channel agent(s) | hypothesis.md |
+| Incrementality, incrementality test, mROAS, tROAS test, split test | agents/paid/sem-incrementality.md | none (self-contained) |
+| (no keyword match — general query) | Use LLM classification to determine intent. If still unclear, list available data and ask for clarification. | depends on classification |
 
 ### 3. Set Analysis Parameters
 From the query, determine:
@@ -45,16 +49,27 @@ From the query, determine:
 - Any specific segments requested
 
 ### 4. Execute Agent Chain
-Run agents in this order:
-1. Channel agent(s) - parallel if multiple
-2. Hypothesis agent - after all channel agents complete
-3. Synthesis agent - only if 2+ channel agents ran
+Run agents in this order (enforced by run_analysis.py):
+1. Channel agent(s) — **parallel** if multiple (each gets its own context with only relevant prompt + config)
+2. **Quality gate**: validate each channel output against /config/schemas/channel-output.json
+3. Hypothesis agent — **sequential**, runs after all channel agents complete
+4. Synthesis agent — **conditional**, only if 2+ channel agents ran
+
+Each channel agent outputs structured JSON to /data/pipeline/{channel}_output.json.
+Output must conform to the schema at /config/schemas/channel-output.json.
 
 ### 5. Format Output
-- Use appropriate template from /templates/ based on query type
-- If weekly analysis: use templates/weekly-report.md
-- If anomaly query: use templates/anomaly-alert.md
-- If period comparison: use templates/period-comparison.md
+Select template using this decision matrix (evaluated in order — first match wins):
+
+| Condition | Template | Rationale |
+|-----------|----------|-----------|
+| Query contains "anomaly", "alert", "flag", "unusual" | templates/anomaly-alert.md | Explicit anomaly request |
+| Any channel output has anomaly with \|z_score\| > 2.0 | templates/anomaly-alert.md | Data-driven anomaly detected |
+| Query contains "compare", "vs", "comparison", "versus" | templates/period-comparison.md | Explicit comparison request |
+| Query specifies two distinct date ranges | templates/period-comparison.md | Implicit comparison |
+| All other queries | templates/weekly-report.md | Default weekly analysis |
+
+Note: The Python orchestrator (run_analysis.py) implements this same logic in `select_template()` and `select_template_from_results()`.
 
 ### 6. Update Memory
 After output is delivered:

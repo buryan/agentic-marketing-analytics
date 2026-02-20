@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "hypothesis-output.json",
+  "title": "Hypothesis Agent Output",
+  "description": "Structured output from the hypothesis agent. Contains ranked hypotheses explaining observed metric movements across channels, with supporting and contradicting evidence.",
+  "type": "object",
+  "required": ["hypotheses"],
+  "additionalProperties": false,
+  "properties": {
+    "hypotheses": {
+      "type": "array",
+      "description": "Ordered list of hypotheses explaining observed metric movements. Sorted by confidence descending.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "metric_move",
+          "channel",
+          "hypothesis",
+          "confidence",
+          "category",
+          "supporting_evidence",
+          "contradicting_evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "metric_move": {
+            "type": "string",
+            "description": "Description of the metric movement being explained (e.g., 'SEM ROAS dropped 15% WoW', 'Display CTR spiked 30% YoY')."
+          },
+          "channel": {
+            "type": "string",
+            "description": "The channel where the metric move was observed."
+          },
+          "hypothesis": {
+            "type": "string",
+            "description": "A clear, testable hypothesis explaining the metric movement."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["HIGH", "MEDIUM", "LOW"],
+            "description": "Confidence level in the hypothesis: HIGH = strong evidence, MEDIUM = plausible with partial evidence, LOW = speculative."
+          },
+          "category": {
+            "type": "string",
+            "enum": ["INTERNAL", "EXTERNAL", "DATA"],
+            "description": "Root cause category: INTERNAL = changes we control (bids, budgets, creative), EXTERNAL = market/competitor/seasonal factors, DATA = data pipeline or tracking issues."
+          },
+          "supporting_evidence": {
+            "type": "array",
+            "description": "List of evidence points that support this hypothesis.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contradicting_evidence": {
+            "type": "array",
+            "description": "List of evidence points that weaken or contradict this hypothesis. Empty array when no contradicting evidence is found.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

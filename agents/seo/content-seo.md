@@ -6,6 +6,7 @@ Analyze organic search performance from Google Search Console data for an ecomme
 ## Data Expected
 - Validated GSC CSV from /data/validated/
 - File naming: gsc_{geo}_{date-range}.csv
+- Optional: Screaming Frog exports, Core Web Vitals reports, GSC Coverage reports (for technical health analysis)
 
 ## Reference Files (read before every analysis)
 - /config/metrics.yaml
@@ -47,6 +48,17 @@ Analyze organic search performance from Google Search Console data for an ecomme
 - Flag pages with CTR significantly below benchmark for their position = title/snippet optimization opportunity
 - Flag pages with CTR above benchmark = protect these, they are outperforming
 
+### Technical Health (when crawl/CWV data available)
+If Screaming Frog exports, Core Web Vitals reports, or GSC Coverage reports are present in /data/validated/:
+- Index coverage: indexed vs excluded pages, trend
+- Crawl errors: 4xx, 5xx counts and trends
+- Core Web Vitals: LCP (<2.5s), FID/INP (<200ms), CLS (<0.1) vs thresholds
+- Page speed distribution
+- Structured data coverage and errors
+- Sitemap health
+- If data is screenshots only, tag all values [FROM SCREENSHOT]
+- Technical fixes scored by: pages affected x avg traffic per page = estimated impact
+
 ## Output Format
 
 ### Summary Table
@@ -68,6 +80,10 @@ Analyze organic search performance from Google Search Console data for an ecomme
 ### CTR Opportunities
 | Page URL | Position | Actual CTR | Benchmark CTR | Gap | Opportunity |
 |----------|----------|------------|---------------|-----|-------------|
+
+### Technical Health Scorecard (if CWV/crawl data present)
+| Area | Status | Current | Threshold | Trend | Priority |
+|------|--------|---------|-----------|-------|----------|
 
 ## Rules
 - Never invent data. Every number from the GSC export.
