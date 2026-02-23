@@ -57,19 +57,22 @@
     },
     "channel_mix": {
       "type": "array",
-      "description": "Intra-group channel mix showing spend/revenue allocation and efficiency.",
+      "description": "Intra-group channel mix showing spend/revenue allocation and efficiency. Non-spend groups (organic, lifecycle) set spend/roas/efficiency to null and use volume fields instead.",
       "items": {
         "type": "object",
-        "required": ["channel", "spend", "spend_share", "revenue", "revenue_share", "roas", "efficiency"],
+        "required": ["channel", "revenue", "revenue_share"],
         "additionalProperties": false,
         "properties": {
           "channel": { "type": "string" },
-          "spend": { "type": "number", "minimum": 0 },
-          "spend_share": { "type": "number", "minimum": 0, "maximum": 1 },
+          "spend": { "type": ["number", "null"], "minimum": 0, "description": "Channel spend. Null for non-spend channels." },
+          "spend_share": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Share of group spend. Null for non-spend channels." },
           "revenue": { "type": "number", "minimum": 0 },
           "revenue_share": { "type": "number", "minimum": 0, "maximum": 1 },
-          "roas": { "type": "number" },
-          "efficiency": { "type": "number", "description": "Revenue Share / Spend Share. >1.0 = above weight." }
+          "roas": { "type": ["number", "null"], "description": "Revenue / spend. Null when spend is 0 or null." },
+          "efficiency": { "type": ["number", "null"], "description": "Revenue Share / Spend Share. >1.0 = above weight. Null for non-spend channels." },
+          "volume_metric": { "type": ["string", "null"], "description": "Name of the volume metric used instead of spend (e.g., 'send_volume', 'traffic', 'transactions'). Null for spend-based groups." },
+          "volume": { "type": ["number", "null"], "minimum": 0, "description": "Volume value for this channel. Null for spend-based groups." },
+          "volume_share": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Share of group volume. Null for spend-based groups." }
         }
       }
     },

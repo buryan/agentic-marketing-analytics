@@ -49,6 +49,7 @@ Before finalizing, check every hypothesis against:
 - /memory/decisions-log.md: did we take an action that caused this?
 
 ## Output Format
+Output must conform to `/config/schemas/hypothesis-output.json`.
 
 | Metric Move | Channel | Hypothesis | Confidence | Supporting Evidence | Contradicting Evidence |
 |-------------|---------|-----------|------------|--------------------|-----------------------|
@@ -58,3 +59,5 @@ Before finalizing, check every hypothesis against:
 - If no plausible hypothesis exists, say "Insufficient data to determine cause. Recommend investigating: [specific areas]."
 - Maximum 3 hypotheses per metric move. Rank by confidence descending.
 - Always check memory files first. Known issues should be the first hypothesis considered.
+- **Output cap**: Maximum 15 total hypotheses across all metric moves. If more than 15, drop LOW confidence first, then oldest MEDIUM confidence.
+- **Correlated moves**: When multiple metrics move together with a likely shared root cause (e.g., CPC up + clicks down + spend flat = bid landscape shift), consolidate into a single hypothesis covering all correlated metrics rather than generating separate hypotheses for each.

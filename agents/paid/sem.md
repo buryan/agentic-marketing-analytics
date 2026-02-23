@@ -72,9 +72,26 @@ Every analysis must segment by:
 | Metric | Segment | Value | Baseline | Z-Score | Known Issue? |
 |--------|---------|-------|----------|---------|--------------|
 
-## Rules
-- Never invent data points. Every number must come from the input file.
-- If data is insufficient for a requested breakdown, state what is missing.
+## Standard Data Integrity Rules
+
+**Output Schema**: All output must conform to `/config/schemas/channel-output.json` with `channel = "sem"` (or `"brand_campaign"` for brand data) and `channel_group = "paid"`.
+
+**Zero-Value Safety**: When a denominator is 0, set the derived metric to `null` (never Infinity, NaN, or 0). Applies to:
+- CPC = Spend / Clicks
+- CTR = Clicks / Impressions
+- CVR = Conversions / Clicks
+- ROAS = Revenue / Spend
+- M1VFM — see /config/metrics.yaml for formula
+
+**Minimum Data Requirements**: WoW comparisons require 5+ complete days in each period. Anomaly detection requires 4+ weeks in the baselines file. If insufficient, skip that comparison and note what is missing.
+
+**First-Run Handling**: If the baselines file is empty or missing, skip anomaly detection entirely and note "Baseline not yet established." Produce all other output normally.
+
+**Data Integrity**: Never invent numbers — every numeric claim must trace to a source file. State what is missing when data is insufficient. Day-of-week align all period comparisons (Monday vs Monday). All monetary values in USD. NA and INTL reported separately, then blended.
+
+**Budget Pacing**: Report budget pacing as defined in the Budget Pacing section.
+
+**Source Citation**: Every entry in `top_movers` and `anomalies` must include the source filename.
+
+## SEM-Specific Rules
 - Always separate Brand vs Non-Brand. These are fundamentally different businesses.
-- When comparing periods, ensure day-of-week alignment. Monday compared to Monday.
-- If baselines file is empty (first run), skip anomaly detection and note "Baseline not yet established."

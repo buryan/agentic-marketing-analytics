@@ -1,5 +1,36 @@
 # Prompt Changelog
 
+## v3.3 - 2026-02-20
+Agent prompt audit: Standard Data Integrity Rules, nullable schemas, distribution group synthesis, quantified formulas.
+
+### Added
+- **agents/distribution/synthesis.md** — Distribution group synthesis agent (transaction-based mix, partner overlap detection, commission optimization ICE actions)
+- **tests/test_schemas.py** — 5 new tests for nullable spend fields, volume fields, and minimal required fields
+
+### Changed
+- **config/schemas/group-synthesis-output.json** — channel_mix: spend, spend_share, roas, efficiency now nullable (`["number", "null"]`). Added volume_metric, volume, volume_share fields. Required reduced to `["channel", "revenue", "revenue_share"]`
+- **config/schemas/synthesis-output.json** — Same nullable + volume field changes as group-synthesis schema
+- **agents/paid/sem.md** — Added Standard Data Integrity Rules block (output schema ref, zero-value safety with metric formulas, minimum data requirements, source citation)
+- **agents/paid/display.md** — Removed "same as SEM" delegation. Added standalone Standard Data Integrity Rules, explicit Anomaly Detection section, display-specific rules (prospecting/retargeting, view-through)
+- **agents/paid/metasearch.md** — Added Standard Data Integrity Rules. Quantified bid thresholds: overbid = ROAS < benchmark AND booking_rate < benchmark; underbid = ROAS > 1.5× benchmark AND impression share declining >10% WoW. Added zero-data platform handling
+- **agents/paid/affiliate.md** — Major rewrite: restructured into Weekly/Monthly/Anomaly Detection/Publisher Ranking/Commission Optimization analysis types. Added Standard Data Integrity Rules, schema ref, channel group annotation, Top 5 Movers table
+- **agents/lifecycle/crm.md** — Replaced duplicate rules with Standard Data Integrity Rules. Added Apple MPP guidance for email open rate
+- **agents/organic/content-seo.md** — Added Standard Data Integrity Rules with schema ref (channel="seo"). Added note: summary tables are human-readable; JSON output must conform to channel-output.json
+- **agents/organic/earned.md** — Replaced rules with Standard Data Integrity Rules block, kept earned-specific rules
+- **agents/hypothesis.md** — Added schema ref to hypothesis-output.json. Added output cap (max 15 hypotheses). Added correlated-moves consolidation rule
+- **agents/cross-channel/synthesis.md** — Added non-spend group handling (volume metrics, null spend/roas). Added failed-agent handling. Added cross-group weighting guidance (revenue share + trend, not cross-metric comparison)
+- **agents/paid/synthesis.md** — Added zero-spend channel rule (set efficiency/roas to null, not 0)
+- **agents/lifecycle/synthesis.md** — Changed spend=0 to spend=null, use volume_metric="send_volume"
+- **agents/organic/synthesis.md** — Changed spend=0 to null, use volume_metric="traffic". Added Brand Awareness Index formula (weighted 0.50/0.25/0.25, normalized vs 8-week avg, GREEN/YELLOW/RED thresholds). Added Content Correlation Score (max 5 points)
+- **run_analysis.py** — Distribution group now has synthesis agent (`agents/distribution/synthesis.md`)
+- **tests/test_routing.py** — Updated distribution synthesis test (now expects synthesis), added pricing-only thin group test
+
+### Architecture Decisions
+- Standard Data Integrity Rules block (~200 words) shared across all 9 channel agents covers: output schema, zero-value safety, minimum data requirements, first-run handling, data integrity, budget pacing, source citation
+- Non-spend groups (organic, lifecycle, distribution) use null for spend/roas/efficiency and volume_metric/volume/volume_share for allocation
+- Distribution group promoted from "too thin" to having its own synthesis agent (partner overlap + commission optimization justify it)
+- Hypothesis output capped at 15 to prevent noise. Correlated metric moves consolidated into single hypotheses
+
 ## v3.2 - 2026-02-20
 System hardening: HALO data integration, test suite, report generator fixes, baselines, .gitignore.
 

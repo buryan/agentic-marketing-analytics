@@ -96,7 +96,7 @@ GROUP_SYNTHESIS_MAP = {
     "paid": "agents/paid/synthesis.md",
     "lifecycle": "agents/lifecycle/synthesis.md",
     "organic": "agents/organic/synthesis.md",
-    "distribution": None,  # Too thin for group synthesis
+    "distribution": "agents/distribution/synthesis.md",
     "pricing": None,  # Single channel, too thin for group synthesis
 }
 

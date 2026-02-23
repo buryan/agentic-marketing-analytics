@@ -126,3 +126,4 @@ The `group_summary` card is consumed by the top-level cross-channel synthesis fo
 - If only 1 paid channel was analyzed, note "Single channel in group, group synthesis not applicable" and produce no further output.
 - All monetary values in USD.
 - Reference /config/metrics.yaml for metric definitions and /config/benchmarks.yaml for performance thresholds.
+- **Zero-spend channel handling**: If a paid channel has 0 spend in the period (e.g., affiliate paused), set its `efficiency` and `roas` to `null` in channel_mix. Do not use 0 — it would distort the group averages.

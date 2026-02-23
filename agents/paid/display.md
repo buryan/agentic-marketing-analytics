@@ -37,9 +37,14 @@ Analyze Display/Programmatic advertising and **Promoted Social** (paid social ad
 - Budget pacing
 - For promoted social, use extended_metrics field: engagement_rate, reach, video_completion_rate
 
+## Anomaly Detection
+- For each metric, calculate z-score vs trailing 8-week average from /memory/baselines/
+- Flag any metric with |z-score| > threshold from /config/thresholds.yaml
+- Cross-reference flagged anomalies with /memory/known-issues.md before alerting
+- If a known issue explains the anomaly, note it but still flag
+
 ## Output Format
-Same structure as SEM agent: Summary Table, Top Movers, Budget Pacing, Anomalies.
-Add: Creative Performance section and Viewability Report.
+Output must conform to `/config/schemas/channel-output.json` with `channel = "display"` (or `"promoted_social"` for paid social data) and `channel_group = "paid"`.
 
 ### Summary Table
 | Metric | Current | Prior | Delta | Delta % | vs Benchmark | Status |
@@ -65,9 +70,23 @@ Add: Creative Performance section and Viewability Report.
 | Metric | Segment | Value | Baseline | Z-Score | Known Issue? |
 |--------|---------|-------|----------|---------|--------------|
 
-## Rules
-- Same data integrity rules as SEM agent
-- Separate prospecting vs retargeting in all analysis. Different economics.
-- View-through conversions reported separately from click-through.
-- Never invent data points. Every number must come from the input file.
-- If data is insufficient for a requested breakdown, state what is missing.
+## Standard Data Integrity Rules
+
+**Output Schema**: See Output Format above for channel/group values.
+
+**Zero-Value Safety**: When a denominator is 0, set the derived metric to `null` (never Infinity, NaN, or 0). Applies to: CPC (Spend/Clicks), CTR (Clicks/Impressions), CVR (Conversions/Clicks), ROAS (Revenue/Spend), CPM (Spend/Impressions × 1000).
+
+**Minimum Data Requirements**: WoW comparisons require 5+ complete days in each period. Anomaly detection requires 4+ weeks in the baselines file. If insufficient, skip that comparison and note what is missing.
+
+**First-Run Handling**: If the baselines file is empty or missing, skip anomaly detection entirely and note "Baseline not yet established." Produce all other output normally.
+
+**Data Integrity**: Never invent numbers — every numeric claim must trace to a source file. State what is missing when data is insufficient. Day-of-week align all period comparisons. All monetary values in USD. NA and INTL reported separately, then blended.
+
+**Budget Pacing**: Report budget pacing as defined in the Budget Pacing section.
+
+**Source Citation**: Every entry in `top_movers` and `anomalies` must include the source filename.
+
+## Display-Specific Rules
+- Separate prospecting vs retargeting in all analysis. Different economics, different benchmarks.
+- View-through conversions reported separately from click-through. Never sum them.
+- Creative fatigue detection uses 3-week CTR trend (not z-score).

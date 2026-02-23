@@ -72,3 +72,49 @@ def test_group_synthesis_group_enum_covers_all_groups():
         assert group in group_enum, (
             f"Group '{group}' from GROUP_CHANNELS missing from group-synthesis-output.json enum"
         )
+
+
+# ── Nullable Spend Fields ────────────────────────────────────────────
+
+
+def test_group_synthesis_channel_mix_spend_nullable():
+    """channel_mix spend/roas/efficiency must accept null for non-spend groups."""
+    schema = _load_schema("group-synthesis-output.json")
+    item_props = schema["properties"]["channel_mix"]["items"]["properties"]
+    for field in ["spend", "spend_share", "roas", "efficiency"]:
+        field_type = item_props[field]["type"]
+        assert isinstance(field_type, list) and "null" in field_type, (
+            f"group-synthesis-output.json channel_mix.{field} must be nullable"
+        )
+
+
+def test_synthesis_channel_mix_spend_nullable():
+    """synthesis-output.json channel_mix spend/roas/efficiency must accept null."""
+    schema = _load_schema("synthesis-output.json")
+    item_props = schema["properties"]["channel_mix"]["items"]["properties"]
+    for field in ["spend", "spend_share", "roas", "efficiency"]:
+        field_type = item_props[field]["type"]
+        assert isinstance(field_type, list) and "null" in field_type, (
+            f"synthesis-output.json channel_mix.{field} must be nullable"
+        )
+
+
+def test_group_synthesis_channel_mix_has_volume_fields():
+    """channel_mix must include volume_metric, volume, volume_share for non-spend groups."""
+    schema = _load_schema("group-synthesis-output.json")
+    item_props = schema["properties"]["channel_mix"]["items"]["properties"]
+    for field in ["volume_metric", "volume", "volume_share"]:
+        assert field in item_props, (
+            f"group-synthesis-output.json channel_mix missing field: {field}"
+        )
+
+
+def test_group_synthesis_channel_mix_required_minimal():
+    """channel_mix required should only be channel, revenue, revenue_share (not spend/roas)."""
+    schema = _load_schema("group-synthesis-output.json")
+    required = schema["properties"]["channel_mix"]["items"]["required"]
+    assert "spend" not in required, "spend should not be required in channel_mix"
+    assert "roas" not in required, "roas should not be required in channel_mix"
+    assert "channel" in required
+    assert "revenue" in required
+    assert "revenue_share" in required

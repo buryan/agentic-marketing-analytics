@@ -47,11 +47,11 @@
     },
     "channel_mix": {
       "type": "array",
-      "description": "Channel mix breakdown showing spend allocation, revenue attribution, ROAS, and efficiency for each channel.",
+      "description": "Channel mix breakdown showing spend allocation, revenue attribution, ROAS, and efficiency for each channel. Non-spend channels set spend/roas/efficiency to null and use volume fields instead.",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["channel", "spend", "spend_share", "revenue", "revenue_share", "roas", "efficiency"],
+        "required": ["channel", "revenue", "revenue_share"],
         "additionalProperties": false,
         "properties": {
           "channel": {
@@ -59,15 +59,15 @@
             "description": "Marketing channel name."
           },
           "spend": {
-            "type": "number",
+            "type": ["number", "null"],
             "minimum": 0,
-            "description": "Total spend for this channel in the analysis period."
+            "description": "Total spend for this channel in the analysis period. Null for non-spend channels."
           },
           "spend_share": {
-            "type": "number",
+            "type": ["number", "null"],
             "minimum": 0,
             "maximum": 1,
-            "description": "This channel's share of total spend (0.0 - 1.0)."
+            "description": "This channel's share of total spend (0.0 - 1.0). Null for non-spend channels."
           },
           "revenue": {
             "type": "number",
@@ -81,12 +81,27 @@
             "description": "This channel's share of total revenue (0.0 - 1.0)."
           },
           "roas": {
-            "type": "number",
-            "description": "Return on ad spend (revenue / spend). May be 0 if spend is 0."
+            "type": ["number", "null"],
+            "description": "Return on ad spend (revenue / spend). Null when spend is 0 or null."
           },
           "efficiency": {
-            "type": "number",
-            "description": "Efficiency score relative to target ROAS or historical baseline. Values > 1.0 indicate above-target performance."
+            "type": ["number", "null"],
+            "description": "Revenue Share / Spend Share. >1.0 = above weight. Null for non-spend channels."
+          },
+          "volume_metric": {
+            "type": ["string", "null"],
+            "description": "Name of the volume metric used instead of spend (e.g., 'send_volume', 'traffic', 'transactions'). Null for spend-based channels."
+          },
+          "volume": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "description": "Volume value for this channel. Null for spend-based channels."
+          },
+          "volume_share": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Share of group volume. Null for spend-based channels."
           }
         }
       }

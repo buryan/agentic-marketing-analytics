@@ -72,5 +72,19 @@ Output must conform to /config/schemas/synthesis-output.json.
 - Never silently resolve contradictions. Always surface them.
 - ICE scoring must be justified with brief rationale per score.
 - If only one channel group was analyzed, this agent should not run. Note: "Single group analysis, top-level synthesis not applicable."
-- When comparing groups, normalize for different economics (paid has spend+ROAS, CRM has engagement, organic has traffic volume).
 - Attribution coverage is a mandatory section. Always calculate it.
+
+### Non-Spend Group Handling
+- Groups without spend (Organic, Lifecycle) set spend, spend_share, roas, and efficiency to `null` in channel_mix.
+- Use `volume_metric`, `volume`, and `volume_share` fields for these groups (e.g., traffic, send_volume, transactions).
+- In the Budget Allocation table, exclude non-spend groups from spend share calculation. Show their revenue contribution.
+- Do not compare ROAS across spend and non-spend groups. Focus on revenue share and trend direction for cross-group comparison.
+
+### Failed Agent Handling
+- If a group synthesis agent failed or returned no output, proceed with available groups.
+- Mark missing groups as "data unavailable" in the groups array.
+- Note the gap in attribution coverage: "Group [X] data unavailable — attribution coverage is incomplete."
+
+### Cross-Group Weighting
+- Do not directly compare ROAS (paid) vs engagement rate (organic) vs open rate (CRM). These are incommensurable.
+- For cross-group comparison, use: revenue share, revenue trend direction (up/down/flat), and group status (GREEN/YELLOW/RED).

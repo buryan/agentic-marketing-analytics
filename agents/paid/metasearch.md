@@ -42,8 +42,9 @@ Every analysis must segment by:
 
 ### Bid Optimization Analysis
 - Compare Avg Bid vs CPC by platform and category
-- Identify overbid segments: high bid, low booking rate, low ROAS
-- Identify underbid segments: competitive ROAS but declining impression share
+- Overbid detection: ROAS below benchmark from /config/benchmarks.yaml AND booking rate below benchmark. Recommend bid reduction with projected savings.
+- Underbid detection: ROAS > 1.5× benchmark AND impression share declining >10% WoW. Recommend bid increase with projected booking uplift.
+- If a platform has zero data for the period, exclude it from comparison and note "No data for [platform]."
 - Recommend bid adjustments with projected impact on bookings and ROAS
 
 ### Platform Comparison
@@ -102,11 +103,22 @@ Output must conform to /config/schemas/channel-output.json with channel = "metas
 | Metric | Segment | Value | Baseline | Z-Score | Known Issue? |
 |--------|---------|-------|----------|---------|--------------|
 
-## Rules
-- Never invent data points. Every number must come from the input file.
-- If data is insufficient for a requested breakdown, state what is missing.
-- NA vs INTL always reported separately, then blended.
+## Standard Data Integrity Rules
+
+**Output Schema**: See line 67 — output conforms to `/config/schemas/channel-output.json` with `channel = "metasearch"` and `channel_group = "paid"`.
+
+**Zero-Value Safety**: When a denominator is 0, set the derived metric to `null` (never Infinity, NaN, or 0). Applies to: CPC (Spend/Clicks), ROAS (Revenue/Spend), Booking Rate (Bookings/Clicks).
+
+**Minimum Data Requirements**: WoW comparisons require 5+ complete days in each period. Anomaly detection requires 4+ weeks in the baselines file. If insufficient, skip that comparison and note what is missing.
+
+**First-Run Handling**: If the baselines file is empty or missing, skip anomaly detection entirely and note "Baseline not yet established." Produce all other output normally.
+
+**Data Integrity**: Never invent numbers — every numeric claim must trace to a source file. State what is missing when data is insufficient. Day-of-week align all period comparisons. All monetary values in USD. NA and INTL reported separately, then blended.
+
+**Budget Pacing**: Report budget pacing as defined in the Budget Pacing section. Break out by platform when budgets are per-platform.
+
+**Source Citation**: Every entry in `top_movers` and `anomalies` must include the source filename.
+
+## Metasearch-Specific Rules
 - Always separate platforms. Different auction dynamics mean different economics.
 - Bid optimization recommendations must include both the upside (projected booking gain) and the risk (potential impression loss).
-- When comparing periods, ensure day-of-week alignment. Monday compared to Monday.
-- If baselines file is empty (first run), skip anomaly detection and note "Baseline not yet established."

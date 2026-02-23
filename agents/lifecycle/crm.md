@@ -111,13 +111,24 @@ Each channel-output object must populate extended_metrics with:
 - deliverability_rate (email, push_notification, sms)
 - send_volume (email, push_notification, sms)
 
-## Rules
-- Never invent data points. Every number must come from the input file.
-- If data is insufficient for a requested breakdown, state what is missing.
-- NA vs INTL always reported separately, then blended.
+## Standard Data Integrity Rules
+
+**Output Schema**: See Output Format above — separate channel-output objects per CRM channel, conforming to `/config/schemas/channel-output.json`.
+
+**Zero-Value Safety**: When a denominator is 0, set the derived metric to `null` (never Infinity, NaN, or 0). Applies to: Open Rate (Opens/Delivered), Click Rate (Clicks/Delivered), CVR (Conversions/Clicks), Unsubscribe Rate (Unsubscribes/Delivered), Deliverability Rate (Delivered/Sent).
+
+**Minimum Data Requirements**: WoW comparisons require 5+ complete days in each period. Anomaly detection requires 4+ weeks in the baselines file. Opt-out trend monitoring requires 3+ weeks. If insufficient, skip that analysis and note what is missing.
+
+**First-Run Handling**: If the baselines file is empty or missing, skip anomaly detection entirely and note "Baseline not yet established." Produce all other output normally.
+
+**Data Integrity**: Never invent numbers — every numeric claim must trace to a source file. State what is missing when data is insufficient. Day-of-week align all period comparisons. All monetary values in USD. NA and INTL reported separately, then blended.
+
+**Budget Pacing**: Not applicable. Set all budget_pacing fields to null.
+
+**Source Citation**: Every entry in `top_movers` and `anomalies` must include the source filename.
+
+## CRM-Specific Rules
 - Produce separate channel-output objects per CRM channel. Do not merge email, push, and SMS into a single output.
 - Benchmark values differ by channel. Always use the correct channel-specific benchmark from /config/benchmarks.yaml.
 - Transactional messages (order confirmations, shipping notifications) should be reported separately from promotional and lifecycle campaigns. They inflate delivery and open metrics if blended.
-- When comparing periods, ensure day-of-week alignment. Send patterns vary significantly by day of week.
-- If baselines file is empty (first run), skip anomaly detection and note "Baseline not yet established."
-- Budget pacing is not applicable. Set all budget_pacing fields to null.
+- **Apple MPP**: Email open rate may be inflated by Apple Mail Privacy Protection. Use click rate as the primary engagement signal for email. Note "Open rates may include Apple MPP pre-fetches" in email analysis narrative.

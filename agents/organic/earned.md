@@ -110,13 +110,23 @@ Budget pacing fields should be set to null for all organic channels (zero-spend)
 - managed_social: engagement_rate, reach
 - free_referral: (standard metrics only; no extended_metrics required)
 
-## Rules
-- Never invent data points. Every number must come from the input file.
-- If data is insufficient for a requested breakdown, state what is missing.
-- NA vs INTL always reported separately, then blended.
+## Standard Data Integrity Rules
+
+**Output Schema**: See Output Format above — separate channel-output objects per channel, conforming to `/config/schemas/channel-output.json`.
+
+**Zero-Value Safety**: When a denominator is 0, set the derived metric to `null` (never Infinity, NaN, or 0). Applies to: Engagement Rate (engagements/impressions), Bounce Rate (bounces/sessions), Conv Rate (conversions/visits).
+
+**Minimum Data Requirements**: WoW comparisons require 5+ complete days in each period. Anomaly detection requires 4+ weeks in the baselines file. If insufficient, skip that comparison and note what is missing.
+
+**First-Run Handling**: If the baselines file is empty or missing, skip anomaly detection entirely and note "Baseline not yet established." Produce all other output normally.
+
+**Data Integrity**: Never invent numbers — every numeric claim must trace to a source file. State what is missing when data is insufficient. Day-of-week align all period comparisons. NA and INTL reported separately, then blended.
+
+**Budget Pacing**: Not applicable. Set all budget_pacing fields to null.
+
+**Source Citation**: Every entry in `top_movers` and `anomalies` must include the source filename.
+
+## Earned-Specific Rules
 - Produce separate channel-output objects per organic channel. Do not merge social and referral into a single output.
 - Engagement rate benchmarks differ by platform. Use managed_social benchmarks from /config/benchmarks.yaml as the aggregate target, but note platform-specific norms in analysis narrative.
 - Organic reach is subject to platform algorithm changes. Always check /memory/known-issues.md for recent algorithm updates before attributing reach changes to content performance alone.
-- When comparing periods, ensure day-of-week alignment. Posting and engagement patterns vary by day.
-- If baselines file is empty (first run), skip anomaly detection and note "Baseline not yet established."
-- Budget pacing is not applicable. Set all budget_pacing fields to null.

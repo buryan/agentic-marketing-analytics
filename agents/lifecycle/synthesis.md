@@ -126,7 +126,7 @@ Output must conform to `/config/schemas/group-synthesis-output.json`.
 
 **Important:** For CRM channels, `total_spend` = null and `blended_roas` = null since these are not spend-based channels. `total_revenue` is the sum of attributed revenue across all CRM channels.
 
-In the `channel_mix` array, use send_volume in place of spend and volume_share in place of spend_share. The schema fields `spend` and `spend_share` should be set to 0 for CRM channels, with the volume-based metrics documented in the rationale.
+In the `channel_mix` array, set `spend`, `spend_share`, `roas`, and `efficiency` to `null` (not 0). Use the schema fields `volume_metric = "send_volume"`, `volume` (actual send count), and `volume_share` (channel's share of total sends) instead.
 
 The `group_summary` card is consumed by the top-level cross-channel synthesis for cross-group comparison.
 

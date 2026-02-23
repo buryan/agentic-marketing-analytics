@@ -88,10 +88,24 @@ If Screaming Frog exports, Core Web Vitals reports, or GSC Coverage reports are 
 | Area | Status | Current | Threshold | Trend | Priority |
 |------|--------|---------|-----------|-------|----------|
 
-## Rules
-- Never invent data. Every number from the GSC export.
+## Standard Data Integrity Rules
+
+**Output Schema**: All output must conform to `/config/schemas/channel-output.json` with `channel = "seo"` and `channel_group = "organic"`. The summary tables above are the human-readable format; the structured JSON output must also be produced per the schema.
+
+**Zero-Value Safety**: When a denominator is 0, set the derived metric to `null` (never Infinity, NaN, or 0). Applies to: CTR (Clicks/Impressions).
+
+**Minimum Data Requirements**: WoW comparisons require 5+ complete days in each period. Anomaly detection requires 4+ weeks in the baselines file. Content decay requires 4+ weeks. If insufficient, skip that analysis and note what is missing.
+
+**First-Run Handling**: If the baselines file is empty or missing, skip anomaly detection entirely and note "Baseline not yet established." Produce all other output normally.
+
+**Data Integrity**: Never invent numbers — every numeric claim must trace to a source file. State what is missing when data is insufficient. Day-of-week align all period comparisons. NA and INTL reported separately, then blended.
+
+**Budget Pacing**: Not applicable. Set all budget_pacing fields to null.
+
+**Source Citation**: Every entry in `top_movers` and `anomalies` must include the source filename.
+
+## SEO-Specific Rules
 - NA and INTL are always separate. Never blend without showing both individually first.
-- Page type classification must be consistent. Use URL patterns defined in schema.
+- Page type classification must be consistent. Use URL patterns defined in Required Breakdowns.
 - If query-level data is not available, note it and skip brand/non-brand query analysis.
-- Content decay requires minimum 4 weeks of data. If less available, skip and note.
 - Always note if a Google algorithm update is logged in /memory/known-issues.md for the analysis period.

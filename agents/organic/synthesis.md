@@ -82,18 +82,34 @@ Rules:
 ## Special Analysis
 
 ### Content Performance Correlation
-Analyze whether content that performs well on social also ranks well in search:
+Analyze whether content that performs well on social also ranks well in search.
+
+**Content Correlation Score** (per topic/URL, max 5 points):
+- SEO: position 1-3 = 2 pts, position 4-10 = 1 pt, position 11+ = 0 pts
+- Social: engagement rate > 2× channel avg = 2 pts, above avg = 1 pt, below avg = 0 pts
+- Shared: content appears in both SEO top pages and social top posts = +1 pt
+
+Score 4-5 = strong cross-channel content. Score 0-1 = missed opportunity.
+
 - Compare top-performing social posts (by engagement) against SEO rankings for the same topics/URLs
 - Identify content themes that resonate across both channels
 - Flag content that performs well on one channel but poorly on the other (missed cross-channel opportunity)
 
 ### Brand Awareness Composite
-Construct a composite brand awareness indicator from organic signals:
-- **Organic brand search volume** (branded keyword traffic from SEO)
-- **Direct traffic** (users navigating directly, indicates brand recall)
-- **Organic social reach** (total impressions/reach without paid amplification)
-- Trend all three metrics period-over-period
-- Flag if any component is declining while others are stable (indicates channel-specific issue, not brand issue)
+Construct a composite brand awareness index from organic signals:
+
+**Formula**: `BAI = 0.50 × (brand_search / brand_search_8wk_avg) + 0.25 × (direct_traffic / direct_traffic_8wk_avg) + 0.25 × (social_reach / social_reach_8wk_avg)`
+
+Each component is normalized against its trailing 8-week average (1.0 = at baseline).
+
+| BAI Score | Status | Interpretation |
+|-----------|--------|----------------|
+| > 1.05 | GREEN | Brand awareness growing |
+| 0.95 - 1.05 | YELLOW | Brand awareness stable |
+| < 0.95 | RED | Brand awareness declining |
+
+- If any component data is missing, exclude it and reweight the remaining components proportionally.
+- Flag if any component is declining while others are stable (indicates channel-specific issue, not brand issue).
 
 ### Paid/Organic Interaction Flag
 Flag for consumption by the top-level cross-channel synthesis:
@@ -127,7 +143,7 @@ Output must conform to `/config/schemas/group-synthesis-output.json`.
 
 **Important:** For organic channels, `total_spend` = null and `blended_roas` = null since these are not spend-based channels. `total_revenue` is the sum of attributed revenue across all organic channels.
 
-In the `channel_mix` array, use traffic volume in place of spend and traffic_share in place of spend_share. The schema fields `spend` and `spend_share` should be set to 0 for organic channels, with the traffic-based metrics documented in the rationale.
+In the `channel_mix` array, set `spend`, `spend_share`, `roas`, and `efficiency` to `null` (not 0). Use the schema fields `volume_metric = "traffic"`, `volume` (session count), and `volume_share` (channel's share of total organic traffic) instead.
 
 The `group_summary` card is consumed by the top-level cross-channel synthesis for cross-group comparison.
 

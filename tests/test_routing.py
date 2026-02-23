@@ -187,7 +187,14 @@ def test_multi_group_synthesis():
     assert top is True
 
 
-def test_no_synthesis_for_thin_groups():
-    """Distribution and pricing groups should not trigger group synthesis (None in map)."""
+def test_distribution_group_synthesis():
+    """Distribution group with 2 channels should trigger group synthesis."""
     groups, top = determine_synthesis_levels(["distribution", "paid_user_referral"])
-    assert "distribution" not in groups  # GROUP_SYNTHESIS_MAP["distribution"] is None
+    assert "distribution" in groups
+    assert top is False
+
+
+def test_no_synthesis_for_thin_groups():
+    """Pricing group should not trigger group synthesis (None in map)."""
+    groups, top = determine_synthesis_levels(["promo"])
+    assert "pricing" not in groups  # GROUP_SYNTHESIS_MAP["pricing"] is None
