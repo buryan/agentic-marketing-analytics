@@ -5,15 +5,18 @@ import pandas as pd
 import numpy as np
 import json
 import warnings
+from pathlib import Path
 from datetime import datetime
 warnings.filterwarnings('ignore')
 
 # ── Paths ──────────────────────────────────────────────────────────────
-INPUT  = "/Users/jburyan/Documents/ClaudeCode/Marketing Analytics/marketing-analytics-agents/data/input"
-OUTPUT = "/Users/jburyan/Documents/ClaudeCode/Marketing Analytics/marketing-analytics-agents/output"
-PERF_FILE = f"{INPUT}/sem_incrementality_data.xlsx"
-CE_FILE   = f"{INPUT}/sem_incrementality_google_ads_changes.xlsx"
-HTML_OUT  = f"{OUTPUT}/sem-incrementality-report.html"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+INPUT  = PROJECT_ROOT / "data" / "input"
+OUTPUT = PROJECT_ROOT / "output"
+PERF_FILE = INPUT / "sem_incrementality_data.xlsx"
+CE_FILE   = INPUT / "sem_incrementality_google_ads_changes.xlsx"
+HTML_OUT  = OUTPUT / "sem-incrementality-report.html"
 
 # ── Constants / Thresholds ────────────────────────────────────────────
 BREAKEVEN_MROAS = 0.80

@@ -5,15 +5,18 @@ import pandas as pd
 import numpy as np
 import json
 import warnings
+from pathlib import Path
 from datetime import datetime
 from scipy import stats
 warnings.filterwarnings('ignore')
 
 # ── Paths ──────────────────────────────────────────────────────────────
-INPUT  = "/Users/jburyan/Documents/ClaudeCode/Marketing Analytics/marketing-analytics-agents/data/input"
-OUTPUT = "/Users/jburyan/Documents/ClaudeCode/Marketing Analytics/marketing-analytics-agents/output"
-DATA_FILE = f"{INPUT}/HALO - data - Data per MKG channel.csv"
-HTML_OUT  = f"{OUTPUT}/display-halo-report.html"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+INPUT  = PROJECT_ROOT / "data" / "input"
+OUTPUT = PROJECT_ROOT / "output"
+DATA_FILE = INPUT / "HALO - data - Data per MKG channel.csv"
+HTML_OUT  = OUTPUT / "display-halo-report.html"
 
 # ── Constants ──────────────────────────────────────────────────────────
 DISPLAY_CHANNEL = 'display'

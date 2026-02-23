@@ -1,5 +1,26 @@
 # Prompt Changelog
 
+## v3.2 - 2026-02-20
+System hardening: HALO data integration, test suite, report generator fixes, baselines, .gitignore.
+
+### Added
+- **data/schemas/halo.yaml** — HALO multi-channel daily data feed schema
+- **scripts/preprocess.py: split_halo_file()** — Splits HALO CSV (19 channels × daily rows) into per-channel files with space-number parsing
+- **scripts/preprocess.py: HALO_CHANNEL_MAP** — Maps 18 HALO channel names to system channel IDs
+- **tests/** — Pytest test suite with 51 tests across 4 modules (test_routing, test_schemas, test_preprocess, test_validate)
+- **tests/fixtures/** — Sample CSV fixtures for HALO (3×3), Google Ads, Email
+- **memory/baselines/** — 7 missing baseline scaffolds (metasearch, email, push, sms, referral, social, distribution)
+
+### Changed
+- **scripts/preprocess.py** — Source identification now runs before column standardization (fixes HALO detection). Added HALO source signature (14 total). Added HALO column aliases.
+- **scripts/validate_data.py** — Added HALO to SOURCE_SCHEMA_MAP and SOURCE_RULES_MAP. Expanded detect_source_from_filename() to recognize all 25+ source prefixes (was only 4).
+- **config/data-quality-rules.yaml** — Added HALO validation rules
+- **output/generate_sem_incrementality_report.py** — Renamed from generate_report.py. Replaced hardcoded absolute paths with Path-relative resolution.
+- **output/generate_display_halo_report.py** — Replaced hardcoded absolute paths with Path-relative resolution.
+- **run_sem_incrementality.py** — Updated GENERATOR path to match renamed file.
+- **.gitignore** — Added data/input/, data/validated/, output/*.html, output/archive/, .pytest_cache/, IDE files.
+- **CLAUDE.md** — Updated source signature count and component list.
+
 ## v3.1 - 2026-02-20
 Added Pricing & Promotions agent as a new standalone channel group.
 

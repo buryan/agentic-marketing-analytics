@@ -131,6 +131,20 @@ COLUMN_ALIASES = {
     "discount value": "Discount Value",
     "redemptions": "Redemptions",
     "eligible users": "Eligible Users",
+    # HALO feed
+    "dimension 1": "Channel",
+    "dimension 2": "Date",
+    "m1+vfm": "M1VFM",
+    "m1 + vfm": "M1VFM",
+    "gb": "Gross Billings",
+    "gr": "Gross Revenue",
+    "nob": "New Order Base",
+    "nor": "New Order Revenue",
+    "ils": "ILS",
+    "vfm": "VFM",
+    "order discount": "Order Discount",
+    "order item count": "Order Item Count",
+    "promo spend": "Promo Spend",
 }
 
 # Source identification rules: (source_name, required_columns_set)
@@ -138,6 +152,7 @@ COLUMN_ALIASES = {
 # Google Ads requires Conversions; Display does not. This is the key discriminator.
 SOURCE_SIGNATURES = [
     # Most specific first to avoid false matches
+    ("halo", {"Dimension 1", "Dimension 2", "Activations", "Impressions", "Spend", "M1+VFM"}),
     ("gsc", {"Page", "Impressions", "Clicks", "CTR", "Position"}),
     ("google-ads", {"Campaign", "Impressions", "Clicks", "Cost", "Conversions"}),
     ("email", {"Campaign", "Sent", "Delivered", "Opens", "Clicks"}),
@@ -505,6 +520,126 @@ def generate_filename(source: str, geo: str, date_range: tuple[str, str] | None)
         return f"{source}_{geo}_{timestamp}.csv"
 
 
+# HALO channel name -> system channel ID mapping
+HALO_CHANNEL_MAP = {
+    "affiliate": "affiliate",
+    "brand campaign": "brand_campaign",
+    "direct": "direct",
+    "display": "display",
+    "distribution": "distribution",
+    "email": "email",
+    "free referral": "free_referral",
+    "managed social": "managed_social",
+    "metasearch": "metasearch",
+    "mobile app downloads": "mobile_app_downloads",
+    "paid user referral": "paid_user_referral",
+    "promoted social": "promoted_social",
+    "push notification": "push_notification",
+    "sem": "sem",
+    "seo": "seo",
+    "sms": "sms",
+    "unknown": "unknown",
+    "unknown utm": "unknown_utm",
+}
+
+
+def parse_space_number(val):
+    """Parse a number formatted with space as thousands separator (European style)."""
+    if pd.isna(val):
+        return float("nan")
+    s = str(val).strip()
+    if s in ("", "#########"):
+        return float("nan")
+    # Remove space thousands separators and convert
+    s = s.replace(" ", "")
+    try:
+        return float(s)
+    except ValueError:
+        return float("nan")
+
+
+def split_halo_file(filepath: Path, dry_run: bool = False) -> dict:
+    """Split a HALO multi-channel CSV into per-channel files.
+
+    The HALO CSV has one row per channel per date. This function:
+    1. Reads with space-separated number parsing
+    2. Filters out Total/N/A rows
+    3. Maps channel names to system channel IDs
+    4. Writes per-channel CSV files to data/validated/
+    """
+    result = {
+        "input_file": str(filepath),
+        "status": "pending",
+        "actions": [],
+        "warnings": [],
+        "output_files": [],
+        "error": None,
+    }
+
+    try:
+        df = pd.read_csv(filepath)
+    except Exception as e:
+        result["status"] = "error"
+        result["error"] = f"Could not read HALO file: {e}"
+        return result
+
+    result["actions"].append(f"Read {len(df)} rows, {len(df.columns)} columns")
+
+    # Parse space-separated numbers for all numeric columns
+    numeric_cols = [c for c in df.columns if c not in ("Dimension 1", "Dimension 2")]
+    for col in numeric_cols:
+        df[col] = df[col].apply(parse_space_number)
+
+    # Filter out Total, N/A, and NaN rows
+    skip_channels = {"Total", "N/A"}
+    original_len = len(df)
+    df = df[df["Dimension 1"].notna() & ~df["Dimension 1"].isin(skip_channels)].reset_index(drop=True)
+    skipped = original_len - len(df)
+    if skipped > 0:
+        result["actions"].append(f"Filtered out {skipped} Total/N/A rows")
+
+    # Get unique channels
+    channels = df["Dimension 1"].str.lower().unique()
+    result["actions"].append(f"Found {len(channels)} channels")
+
+    files_written = 0
+    for channel_raw in sorted(df["Dimension 1"].unique()):
+        channel_lower = channel_raw.lower().strip()
+        channel_id = HALO_CHANNEL_MAP.get(channel_lower)
+
+        if channel_id is None:
+            result["warnings"].append(f"WARN: Unknown HALO channel '{channel_raw}' — skipped")
+            continue
+
+        channel_df = df[df["Dimension 1"] == channel_raw].copy()
+
+        # Rename Dimension 2 -> Date
+        channel_df = channel_df.rename(columns={"Dimension 2": "Date"})
+        # Drop Dimension 1 (channel name is now encoded in filename)
+        channel_df = channel_df.drop(columns=["Dimension 1"])
+
+        # Standardize dates
+        channel_df, date_warnings = standardize_dates(channel_df)
+        result["warnings"].extend(date_warnings)
+
+        # Get date range
+        date_range = get_date_range(channel_df)
+
+        # HALO has no geo split — output as ALL
+        filename = generate_filename(channel_id, "all", date_range)
+        output_path = DATA_VALIDATED / filename
+
+        if not dry_run:
+            channel_df.to_csv(output_path, index=False)
+
+        result["output_files"].append(str(output_path))
+        files_written += 1
+
+    result["actions"].append(f"Split into {files_written} per-channel files")
+    result["status"] = "success"
+    return result
+
+
 def process_file(filepath: Path, dry_run: bool = False) -> dict:
     """Process a single file. Returns a result dict with status and details."""
     result = {
@@ -550,18 +685,27 @@ def process_file(filepath: Path, dry_run: bool = False) -> dict:
     if len(df) < original_len:
         result["actions"].append(f"Stripped {original_len - len(df)} junk rows")
 
-    # 4. Standardize columns
+    # 4. Identify source from original columns (before aliasing may rename them)
+    source = identify_source(df)
+
+    # 4b. Standardize columns
     df = standardize_columns(df)
     result["actions"].append("Standardized column names and cleaned numeric values")
 
-    # 5. Identify source
-    source = identify_source(df)
+    # 4c. If source wasn't found from original columns, try again after standardization
+    if source is None:
+        source = identify_source(df)
+
     if source is None:
         result["status"] = "error"
         result["error"] = f"Could not identify data source. Columns: {list(df.columns)}"
         return result
 
     result["actions"].append(f"Identified source: {source}")
+
+    # 4d. HALO files need special handling — split into per-channel files
+    if source == "halo":
+        return split_halo_file(filepath, dry_run=dry_run)
 
     # 6. Standardize dates
     df, date_warnings = standardize_dates(df)

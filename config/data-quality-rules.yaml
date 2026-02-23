@@ -250,6 +250,35 @@ promo_export:
     type: daily
     rule: "One row per promo per date in requested range"
 
+halo:
+  source_identifier: "Columns contain Dimension 1, Dimension 2, Activations, Impressions, Spend"
+  required_columns:
+    - Dimension 1
+    - Dimension 2
+    - Impressions
+    - Spend
+  optional_columns:
+    - Activations
+    - Reactivations
+    - M1+VFM
+    - Order Discount
+    - Order Item Count
+    - Units
+    - GB
+    - GR
+    - NOB
+    - NOR
+    - ILS
+    - VFM
+    - Promo Spend
+  date_format: YYYY-MM-DD
+  sanity_checks:
+    impressions: { min: 0, max: 1000000000 }
+    spend: { min: 0, max: 10000000 }
+  completeness:
+    type: daily
+    rule: "One row per channel per date"
+
 screenshot:
   source_identifier: "Image file (PNG, JPG, JPEG)"
   validation:

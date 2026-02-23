@@ -4,6 +4,22 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Data (raw and validated — not source code)
+data/input/
+data/validated/
 
 # Pipeline runtime (generated per-run, not source)
 data/pipeline/
+
+# Generated reports (HTML output, not source)
+output/*.html
+output/archive/
+
+# IDE
+.vscode/
+.idea/
+*.swp

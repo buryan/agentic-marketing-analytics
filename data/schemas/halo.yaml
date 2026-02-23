@@ -1,0 +1,52 @@
+name: HALO Data Feed
+file_pattern: "HALO*.csv"
+description: Multi-channel daily data feed with all marketing channels. One row per channel per date. Uses space-separated European number formatting.
+required_columns:
+  - name: Dimension 1
+    type: string
+    description: Channel name (e.g. affiliate, sem, display)
+  - name: Dimension 2
+    type: date
+    description: Date (YYYY-MM-DD)
+  - name: Impressions
+    type: integer
+    min: 0
+  - name: Spend
+    type: float
+    min: 0
+    unit: USD
+optional_columns:
+  - name: Activations
+    type: integer
+  - name: Reactivations
+    type: integer
+  - name: M1+VFM
+    type: float
+    unit: USD
+  - name: Order Discount
+    type: float
+    unit: USD
+  - name: Order Item Count
+    type: integer
+  - name: Units
+    type: integer
+  - name: GB
+    type: float
+    unit: USD
+  - name: GR
+    type: float
+    unit: USD
+  - name: NOB
+    type: integer
+  - name: NOR
+    type: float
+    unit: USD
+  - name: ILS
+    type: float
+    unit: USD
+  - name: VFM
+    type: float
+    unit: USD
+  - name: Promo Spend
+    type: float
+    unit: USD

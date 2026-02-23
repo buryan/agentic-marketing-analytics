@@ -8,9 +8,10 @@ Hybrid Python + LLM agent system. The Python orchestrator (`run_analysis.py`) en
 
 ### Key Components
 - **run_analysis.py** — Master orchestrator enforcing the 9-step chain with 2-layer synthesis
-- **scripts/preprocess.py** — Deterministic file standardization (12 source signatures)
+- **scripts/preprocess.py** — Deterministic file standardization (14 source signatures, HALO multi-channel splitter)
 - **scripts/validate_data.py** — Deterministic data quality validation with gate logic
-- **agents/{group}/*.md** — LLM agent prompts organized by channel group (paid/, lifecycle/, organic/, distribution/)
+- **agents/{group}/*.md** — LLM agent prompts organized by channel group (paid/, lifecycle/, organic/, distribution/, pricing/)
+- **tests/** — Pytest test suite (routing, schemas, preprocessing, validation)
 - **config/schemas/*.json** — Structured output contracts (channel-output, group-synthesis-output, hypothesis-output, synthesis-output)
 - **data/pipeline/** — Inter-agent communication via JSON files
 

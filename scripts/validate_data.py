@@ -56,6 +56,7 @@ SOURCE_SCHEMA_MAP = {
     "referral-program": "distribution",
     "social-organic": "promoted-social",
     "promo": "promo",
+    "halo": "halo",
 }
 
 # Source name -> data-quality-rules.yaml key mapping
@@ -73,6 +74,7 @@ SOURCE_RULES_MAP = {
     "referral-program": "distribution_export",
     "social-organic": "promoted_social_export",
     "promo": "promo_export",
+    "halo": "halo",
 }
 
 
@@ -104,14 +106,38 @@ def load_schema(source: str) -> dict | None:
 def detect_source_from_filename(filename: str) -> str | None:
     """Detect data source from standardized filename."""
     name = filename.lower()
-    if name.startswith("google-ads"):
-        return "google-ads"
-    elif name.startswith("gsc"):
-        return "gsc"
-    elif name.startswith("affiliate"):
-        return "affiliate"
-    elif name.startswith("display"):
-        return "display"
+    # Check all known source prefixes (order: longer prefixes first to avoid partial matches)
+    source_prefixes = [
+        "referral-program",
+        "social-organic",
+        "social-paid",
+        "google-ads",
+        "mobile_app_downloads",
+        "push_notification",
+        "brand_campaign",
+        "paid_user_referral",
+        "free_referral",
+        "managed_social",
+        "promoted_social",
+        "unknown_utm",
+        "metasearch",
+        "distribution",
+        "affiliate",
+        "display",
+        "direct",
+        "email",
+        "promo",
+        "push",
+        "halo",
+        "gsc",
+        "sem",
+        "seo",
+        "sms",
+        "unknown",
+    ]
+    for prefix in source_prefixes:
+        if name.startswith(prefix):
+            return prefix
     return None
 
 
