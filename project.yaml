@@ -1,0 +1,12 @@
+project: Marketing Analytics
+dir: /Users/jburyan/Documents/Claude/Company/Marketing Analytics/marketing-analytics-agents
+skills:
+  run-analysis:
+    trigger: "run analysis"
+    tools:
+      - ToolSearch
+      - Read
+      - Grep
+      - Glob
+      - Bash
+    max_turns: 10

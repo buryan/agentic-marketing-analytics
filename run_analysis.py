@@ -24,6 +24,7 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import re
 import subprocess
@@ -756,6 +757,160 @@ def update_decisions_log(actions: list[dict], analysis_source: str):
 
 
 # ─────────────────────────────────────────────
+# AUTO-EXECUTION VIA ORCHESTRATOR
+# ─────────────────────────────────────────────
+
+def _try_import_orchestrator():
+    """Try to import the shared orchestrator. Returns module or None."""
+    orchestrator_path = Path(__file__).resolve().parent.parent.parent / "shared" / "lib"
+    sys.path.insert(0, str(orchestrator_path))
+    try:
+        import orchestrator
+        return orchestrator
+    except ImportError:
+        return None
+
+
+def _auto_execute_agents(active_channels, classification, group_synthesis_groups,
+                         needs_top_synthesis, template, pipeline_result) -> bool:
+    """Auto-execute sub-agents via the shared orchestrator.
+
+    Returns True if auto-execution succeeded, False to fall back to manual mode.
+    """
+    orch = _try_import_orchestrator()
+    if orch is None:
+        print("\n  Orchestrator not available (shared/lib/orchestrator.py). Falling back to manual mode.")
+        return False
+
+    logger = logging.getLogger(__name__)
+    project_dir = str(PROJECT_ROOT)
+
+    # Step 4 execution: Channel agents in parallel
+    print(f"\n  Auto-executing {len(active_channels)} channel agents in parallel...")
+    channel_tasks = []
+    for ch in active_channels:
+        prompt_file = DATA_PIPELINE / f"{ch}_prompt.md"
+        prompt_text = prompt_file.read_text()
+        channel_tasks.append(orch.Task(
+            name=ch,
+            project_dir=project_dir,
+            prompt=prompt_text,
+            tools=["Read", "Grep", "Glob", "Bash"],
+            max_turns=10,
+            timeout=300,
+        ))
+
+    channel_results = orch.run_parallel(channel_tasks, max_concurrent=3)
+    channel_outputs = []
+
+    for task, result in zip(channel_tasks, channel_results):
+        if result.exit_code == 0:
+            # Try to parse JSON from output
+            output_file = DATA_PIPELINE / f"{task.name}_output.json"
+            if output_file.exists():
+                try:
+                    with open(output_file) as f:
+                        channel_outputs.append(json.load(f))
+                    print(f"    {task.name}: OK ({result.duration_seconds:.1f}s)")
+                    continue
+                except json.JSONDecodeError:
+                    pass
+            # Try parsing from stdout
+            try:
+                parsed = json.loads(result.output)
+                channel_outputs.append(parsed)
+                with open(output_file, "w") as f:
+                    json.dump(parsed, f, indent=2)
+                print(f"    {task.name}: OK ({result.duration_seconds:.1f}s)")
+            except (json.JSONDecodeError, ValueError):
+                print(f"    {task.name}: OK but non-JSON output ({result.duration_seconds:.1f}s)")
+                channel_outputs.append({"channel": task.name, "raw_output": result.output[:2000]})
+        else:
+            print(f"    {task.name}: FAILED ({result.error})")
+
+    pipeline_result["steps"]["channel_execution"] = {
+        "executed": len(channel_tasks),
+        "succeeded": sum(1 for r in channel_results if r.exit_code == 0),
+    }
+
+    # Step 5 execution: Group synthesis (parallel across groups)
+    if group_synthesis_groups and channel_outputs:
+        print(f"\n  Auto-executing group synthesis for: {group_synthesis_groups}")
+        group_tasks = []
+        for group in group_synthesis_groups:
+            group_ch_outputs = [o for o in channel_outputs
+                                if o.get("channel_group") == group or
+                                CHANNEL_GROUPS.get(o.get("channel")) == group]
+            prompt = build_group_synthesis_prompt(group, group_ch_outputs)
+            group_tasks.append(orch.Task(
+                name=f"{group}_synthesis",
+                project_dir=project_dir,
+                prompt=prompt,
+                tools=["Read", "Grep", "Glob"],
+                max_turns=8,
+                timeout=240,
+            ))
+
+        group_results = orch.run_parallel(group_tasks, max_concurrent=3)
+        for task, result in zip(group_tasks, group_results):
+            status = "OK" if result.exit_code == 0 else "FAILED"
+            print(f"    {task.name}: {status} ({result.duration_seconds:.1f}s)")
+
+    # Step 6 execution: Hypothesis (sequential)
+    if channel_outputs:
+        print(f"\n  Auto-executing hypothesis agent...")
+        hyp_prompt = build_hypothesis_prompt(channel_outputs)
+        hyp_result = orch.run_task(orch.Task(
+            name="hypothesis",
+            project_dir=project_dir,
+            prompt=hyp_prompt,
+            tools=["Read", "Grep", "Glob"],
+            max_turns=8,
+            timeout=240,
+        ))
+        status = "OK" if hyp_result.exit_code == 0 else "FAILED"
+        print(f"    hypothesis: {status} ({hyp_result.duration_seconds:.1f}s)")
+
+    # Step 7: Top synthesis (conditional)
+    if needs_top_synthesis:
+        print(f"\n  Auto-executing top-level synthesis...")
+        # Read group synthesis outputs
+        group_syn_outputs = []
+        for group in group_synthesis_groups:
+            syn_file = DATA_PIPELINE / f"{group}_group_synthesis_output.json"
+            if syn_file.exists():
+                try:
+                    with open(syn_file) as f:
+                        group_syn_outputs.append(json.load(f))
+                except json.JSONDecodeError:
+                    pass
+
+        hyp_output = {}
+        hyp_file = DATA_PIPELINE / "hypothesis_output.json"
+        if hyp_file.exists():
+            try:
+                with open(hyp_file) as f:
+                    hyp_output = json.load(f)
+            except json.JSONDecodeError:
+                pass
+
+        top_prompt = build_top_synthesis_prompt(group_syn_outputs, hyp_output)
+        top_result = orch.run_task(orch.Task(
+            name="top_synthesis",
+            project_dir=project_dir,
+            prompt=top_prompt,
+            tools=["Read", "Grep", "Glob"],
+            max_turns=8,
+            timeout=240,
+        ))
+        status = "OK" if top_result.exit_code == 0 else "FAILED"
+        print(f"    top_synthesis: {status} ({top_result.duration_seconds:.1f}s)")
+
+    print(f"\n  Auto-execution complete.")
+    return True
+
+
+# ─────────────────────────────────────────────
 # MAIN PIPELINE
 # ─────────────────────────────────────────────
 
@@ -963,19 +1118,26 @@ def run_pipeline(query: str = "", channels: list[str] | None = None,
     print(f"Pipeline result saved to: {result_file}")
 
     if pipeline_result["status"] == "ready":
-        print(f"\nNext steps:")
-        print(f"  1. Invoke channel sub-agents (can run in parallel):")
-        for ch in active_channels:
-            print(f"     - {ch}: read {DATA_PIPELINE / f'{ch}_prompt.md'} and execute")
-        print(f"  2. Collect outputs from {DATA_PIPELINE}/*_output.json")
-        if group_synthesis_groups:
-            print(f"  3. Invoke group synthesis agents (parallel across groups):")
-            for g in group_synthesis_groups:
-                print(f"     - {g}: read {DATA_PIPELINE / f'{g}_group_synthesis_prompt.md'}")
-        print(f"  4. Invoke hypothesis sub-agent with all outputs")
-        if needs_top_synthesis:
-            print(f"  5. Invoke top-level synthesis with group outputs")
-        print(f"  6. Format final report using {template}")
+        # Attempt auto-execution via orchestrator
+        auto_executed = _auto_execute_agents(
+            active_channels, classification, group_synthesis_groups,
+            needs_top_synthesis, template, pipeline_result,
+        )
+
+        if not auto_executed:
+            print(f"\nManual execution required:")
+            print(f"  1. Invoke channel sub-agents (can run in parallel):")
+            for ch in active_channels:
+                print(f"     - {ch}: read {DATA_PIPELINE / f'{ch}_prompt.md'} and execute")
+            print(f"  2. Collect outputs from {DATA_PIPELINE}/*_output.json")
+            if group_synthesis_groups:
+                print(f"  3. Invoke group synthesis agents (parallel across groups):")
+                for g in group_synthesis_groups:
+                    print(f"     - {g}: read {DATA_PIPELINE / f'{g}_group_synthesis_prompt.md'}")
+            print(f"  4. Invoke hypothesis sub-agent with all outputs")
+            if needs_top_synthesis:
+                print(f"  5. Invoke top-level synthesis with group outputs")
+            print(f"  6. Format final report using {template}")
 
     return pipeline_result
 
